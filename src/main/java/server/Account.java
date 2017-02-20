@@ -1,9 +1,9 @@
 package server;
 
-public class Account implements Comparable< Account > {
+@SuppressWarnings( "unused" )
+class Account implements Comparable< Account > {
 
     public Account( int id, String login, String password ) {
-
         this.id = id;
         this.login = login;
         this.password = password;
@@ -21,7 +21,10 @@ public class Account implements Comparable< Account > {
         return password;
     }
 
-    @SuppressWarnings( "unused" )
+    public boolean passwordMatches( String password ) {
+        return this.password.equals( password );
+    }
+
     public boolean equals( Account account ) {
         return ( this.id == account.id );
     }

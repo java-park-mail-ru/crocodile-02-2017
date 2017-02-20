@@ -2,6 +2,7 @@ package server;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,13 +16,18 @@ public class AccountController {
     private final static String LOGIN_ATTR = "login";
     private final static String PASSWORD_ATTR = "password";
 
-    private static class LoginRequest {
+    @Autowired
+    public AccountController( AccountService accountService ) {
+        this.accountService = accountService;
+    }
+
+    private static class AccountBody {
 
         private String login;
         private String password;
 
         @JsonCreator
-        public LoginRequest(
+        public AccountBody(
                 @JsonProperty( LOGIN_ATTR ) String login,
                 @JsonProperty( PASSWORD_ATTR ) String password ) {
 
@@ -39,13 +45,13 @@ public class AccountController {
     }
 
     @PostMapping( path = "/login/", consumes = "application/json" )
-    public ResponseEntity login( @RequestBody LoginRequest body, HttpSession session ) {
+    public ResponseEntity login( @RequestBody AccountBody body, HttpSession session ) {
 
-        int id = accountService.getIdFor( body.getLogin(), body.getPassword() );
+        Account account = accountService.find( body.getLogin() );
 
-        if (  id >= 0 ) {
+        if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
 
-            session.setAttribute( ID_ATTR, id );
+            session.setAttribute( ID_ATTR, account.getId() );
             return ResponseEntity.ok( body.getLogin() + " " + body.getPassword() + " logged in." );
         }
 
@@ -53,9 +59,9 @@ public class AccountController {
     }
 
     @PostMapping( path = "/register/", consumes = "application/json" )
-    public ResponseEntity register( @RequestBody LoginRequest body, HttpSession session ) {
+    public ResponseEntity register( @RequestBody AccountBody body, HttpSession session ) {
 
-        if ( ( body.getPassword() != null ) && !accountService.anyMatch( body.getLogin() ) ) {
+        if ( ( body.getPassword() != null ) && !accountService.has( body.getLogin() ) ) {
 
             int id = accountService.addAccount( body.getLogin(), body.getPassword() ).getId();
             session.setAttribute( ID_ATTR, id );
@@ -83,5 +89,5 @@ public class AccountController {
         return ResponseEntity.ok( "Account not found." );
     }
 
-    private AccountService accountService = new AccountService();
+    private AccountService accountService;
 }

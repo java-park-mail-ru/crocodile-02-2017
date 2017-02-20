@@ -2,51 +2,27 @@ package server;
 
 import org.springframework.stereotype.Service;
 
+import javax.validation.constraints.NotNull;
 import java.util.*;
 
 @Service
 public class AccountService {
 
-    public Account addAccount( String login, String password ) {
-        Account account = new Account( lastKey++, login, password );
-        accounts.add( account );
-        return account;
+    public AccountService() {
+        accounts = new TreeSet< Account >();
+        lastId = 0;
     }
 
-    public int getIdFor( String login, String password ) {
+    public Account addAccount( @NotNull String login, @NotNull String password ) {
 
-        if ( ( login == null ) || ( password == null ) ) {
+        if ( !this.has( login ) ) {
 
-            return -1;
+            Account account = new Account( lastId++, login, password );
+            accounts.add( account );
+            return account;
         }
 
-        for ( Account account: accounts ) {
-
-            if ( account.getLogin().equals( login ) && account.getPassword().equals( password ) ) {
-
-                return account.getId();
-            }
-        }
-
-        return -1;
-    }
-
-    public boolean anyMatch( String login ) {
-
-        if ( login == null ) {
-
-            return false;
-        }
-
-        for ( Account account: accounts ) {
-
-            if ( account.getLogin().equals( login ) ) {
-
-                return true;
-            }
-        }
-
-        return false;
+        return null;
     }
 
     public Account find( int id ) {
@@ -62,6 +38,27 @@ public class AccountService {
         return null;
     }
 
-    public TreeSet< Account > accounts = new TreeSet< Account >();
-    private int lastKey = 0;
+    public Account find( String login ) {
+
+        if ( login == null ) {
+            return null;
+        }
+
+        for ( Account account: accounts ) {
+
+            if ( account.getLogin().equals( login ) ) {
+
+                return account;
+            }
+        }
+
+        return null;
+    }
+
+    public boolean has( String login ) {
+        return ( this.find( login ) != null );
+    }
+
+    private TreeSet< Account > accounts;
+    private int lastId;
 }
