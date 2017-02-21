@@ -23,15 +23,15 @@ public class Account {
         return id;
     }
 
-    public String getLogin() {
+    public @NotNull String getLogin() {
         return login;
     }
 
-    public String getPassword() {
+    public @NotNull String getPassword() {
         return password;
     }
 
-    public String getEmail() {
+    public @NotNull String getEmail() {
         return email;
     }
 
@@ -45,7 +45,7 @@ public class Account {
     }
 
     private int id;
-    private String login;
-    private String password;
-    private String email;
+    private @NotNull String login;
+    private @NotNull String password;
+    private @NotNull String email;
 }

@@ -35,14 +35,18 @@ public class AccountService {
         return null;
     }
 
-    public @Nullable Account find( @NotNull String login ) {
+    public @Nullable Account find( String login ) {
 
         return accounts.get( login );
     }
 
-    public boolean has( @NotNull String login ) {
+    public boolean has( int id ) {
+        return ( this.find( id ) != null );
+    }
+
+    public boolean has( String login ) {
         return ( this.find( login ) != null );
     }
 
-    private HashMap< String, Account > accounts;
+    private @NotNull HashMap< String, Account > accounts;
 }

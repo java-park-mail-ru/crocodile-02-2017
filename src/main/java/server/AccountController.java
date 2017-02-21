@@ -31,13 +31,19 @@ public class AccountController {
 
         @JsonCreator
         AccountBody(
+                @JsonProperty( ID_ATTR ) Integer id,
                 @JsonProperty( LOGIN_ATTR ) String login,
                 @JsonProperty( PASSWORD_ATTR ) String password,
                 @JsonProperty( EMAIL_ATTR ) String email ) {
 
+            this.id = id;
             this.login = login;
             this.password = password;
             this.email = email;
+        }
+
+        public Integer getId() {
+            return id;
         }
 
         String getLogin() {
@@ -52,6 +58,7 @@ public class AccountController {
             return email;
         }
 
+        private Integer id;
         private String login;
         private String password;
         private String email;
@@ -60,18 +67,7 @@ public class AccountController {
     @SuppressWarnings( "unused" )
     private static class AnswerBody {
 
-        static final int STATUS_OK = 200;
-        static final int STATUS_BAD = 400;
-        static final int STATUS_FORBIDDEN = 403;
-        static final int STATUS_NOT_FOUND = 404;
-
         AnswerBody() {
-            this.code = STATUS_OK;
-            parameters = new HashMap< String, String >();
-        }
-
-        AnswerBody( int error ) {
-            code = error;
             parameters = new HashMap< String, String >();
         }
 
@@ -79,19 +75,10 @@ public class AccountController {
             parameters.put( name, value );
         }
 
-        public void setCode( int error ) {
-            code = error;
-        }
-
-        public int getCode() {
-            return code;
-        }
-
         public HashMap< String, String > getParameters() {
             return new HashMap< String, String >( parameters );
         }
 
-        private int code;
         private HashMap< String, String > parameters;
     }
 
@@ -109,15 +96,14 @@ public class AccountController {
             return ResponseEntity.ok( answerBody );
         }
 
-        answerBody.setCode( AnswerBody.STATUS_BAD );
         return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( answerBody );
     }
 
     @PostMapping( path = "/login/", consumes = "application/json", produces = "application/json" )
     public ResponseEntity< AnswerBody > login( @RequestBody AccountBody body, HttpSession session ) {
 
-        final Account account = accountService.find( body.getLogin() );
         final AnswerBody answerBody = new AnswerBody();
+        final Account account = accountService.find( body.getLogin() );
 
         if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
 
@@ -125,9 +111,41 @@ public class AccountController {
             return ResponseEntity.ok( answerBody );
         }
 
-        answerBody.setCode( AnswerBody.STATUS_FORBIDDEN );
         return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
     }
+
+    /*!!!!!!!!!!!!!!!!!!!!!!
+    @PostMapping( path = "/change/", consumes = "application/json", produces = "application/json" )
+    public ResponseEntity< AnswerBody > changeUser( @RequestBody AccountBody body, HttpSession session ) {
+
+        final AnswerBody answerBody = new AnswerBody();
+
+        if ( body.getId() == null ) {
+
+            return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( answerBody );
+        }
+
+        final Account account = accountService.find( body.getId() );
+
+        if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
+
+            if ( account.getLogin() != null ) {
+
+                if ( accountService.find( account.getLogin() ) != null ) {
+
+                    answerBody.addParameter( LOGIN_ATTR, account.getLogin() );
+                    return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( answerBody );
+                }
+
+
+            }
+
+            session.setAttribute( ID_ATTR, account.getId() );
+            return ResponseEntity.ok( answerBody );
+        }
+
+        return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
+    }*/
 
     @GetMapping( path = "/logout/" )
     public ResponseEntity logout( HttpSession session ) {
@@ -154,7 +172,6 @@ public class AccountController {
             }
         }
 
-        answerBody.setCode( AnswerBody.STATUS_NOT_FOUND );
         return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( answerBody );
     }
 
