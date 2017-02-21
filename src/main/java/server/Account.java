@@ -1,12 +1,22 @@
 package server;
 
-@SuppressWarnings( "unused" )
-class Account implements Comparable< Account > {
+import org.jetbrains.annotations.NotNull;
 
-    public Account( int id, String login, String password ) {
-        this.id = id;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@SuppressWarnings( "unused" )
+public class Account {
+
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger( 0 );
+
+    public Account(
+            @NotNull String login,
+            @NotNull String password,
+            @NotNull String email ) {
+        this.id = ID_GENERATOR.getAndIncrement();
         this.login = login;
         this.password = password;
+        this.email = email;
     }
 
     public int getId() {
@@ -21,25 +31,21 @@ class Account implements Comparable< Account > {
         return password;
     }
 
-    public boolean passwordMatches( String password ) {
-        return this.password.equals( password );
+    public String getEmail() {
+        return email;
     }
 
-    public boolean equals( Account account ) {
-        return ( this.id == account.id );
-    }
-
-    @Override
-    public int compareTo( Account account ) {
-        return ( this.id >= account.id ) ? ( this.id == account.id ) ? 0 : 1 : -1;
+    public boolean passwordMatches( String other ) {
+        return password.equals( other );
     }
 
     @Override
     public String toString() {
-        return login + " " + password;
+        return login + " :" + email;
     }
 
     private int id;
     private String login;
     private String password;
+    private String email;
 }

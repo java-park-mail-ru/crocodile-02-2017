@@ -1,33 +1,30 @@
 package server;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
-import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.HashMap;
 
 @Service
 public class AccountService {
 
     public AccountService() {
-        accounts = new TreeSet< Account >();
-        lastId = 0;
+        accounts = new HashMap< String, Account >();
     }
 
-    public Account addAccount( @NotNull String login, @NotNull String password ) {
-
-        if ( !this.has( login ) ) {
-
-            Account account = new Account( lastId++, login, password );
-            accounts.add( account );
-            return account;
-        }
-
-        return null;
+    public @NotNull Account addAccount(
+            @NotNull String login,
+            @NotNull String password,
+            @NotNull String email ) {
+        final Account account = new Account( login, password, email );
+        accounts.put( login, account );
+        return account;
     }
 
-    public Account find( int id ) {
+    public @Nullable Account find( int id ) {
 
-        for ( Account account: accounts ) {
+        for ( Account account : accounts.values() ) {
 
             if ( account.getId() == id ) {
 
@@ -38,27 +35,14 @@ public class AccountService {
         return null;
     }
 
-    public Account find( String login ) {
+    public @Nullable Account find( @NotNull String login ) {
 
-        if ( login == null ) {
-            return null;
-        }
-
-        for ( Account account: accounts ) {
-
-            if ( account.getLogin().equals( login ) ) {
-
-                return account;
-            }
-        }
-
-        return null;
+        return accounts.get( login );
     }
 
-    public boolean has( String login ) {
+    public boolean has( @NotNull String login ) {
         return ( this.find( login ) != null );
     }
 
-    private TreeSet< Account > accounts;
-    private int lastId;
+    private HashMap< String, Account > accounts;
 }
