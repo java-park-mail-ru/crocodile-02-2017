@@ -31,19 +31,13 @@ public class AccountController {
 
         @JsonCreator
         AccountBody(
-                @JsonProperty( ID_ATTR ) Integer id,
                 @JsonProperty( LOGIN_ATTR ) String login,
                 @JsonProperty( PASSWORD_ATTR ) String password,
                 @JsonProperty( EMAIL_ATTR ) String email ) {
 
-            this.id = id;
             this.login = login;
             this.password = password;
             this.email = email;
-        }
-
-        public Integer getId() {
-            return id;
         }
 
         String getLogin() {
@@ -58,7 +52,11 @@ public class AccountController {
             return email;
         }
 
-        private Integer id;
+        public boolean isFull() {
+
+            return ( login != null ) && ( password != null ) && ( email != null );
+        }
+
         private String login;
         private String password;
         private String email;
@@ -68,18 +66,18 @@ public class AccountController {
     private static class AnswerBody {
 
         AnswerBody() {
-            parameters = new HashMap< String, String >();
+            properties = new HashMap< String, String >();
         }
 
-        public void addParameter( @NotNull String name, String value ) {
-            parameters.put( name, value );
+        public void addProperty( @NotNull String name, String value ) {
+            properties.put( name, value );
         }
 
-        public HashMap< String, String > getParameters() {
-            return new HashMap< String, String >( parameters );
+        public HashMap< String, String > getProperties() {
+            return new HashMap< String, String >( properties );
         }
 
-        private HashMap< String, String > parameters;
+        private HashMap< String, String > properties;
     }
 
     @PostMapping( path = "/register/", consumes = "application/json", produces = "application/json" )
@@ -87,12 +85,14 @@ public class AccountController {
 
         final AnswerBody answerBody = new AnswerBody();
 
-        if ( ( body.getPassword() != null ) && !accountService.has( body.getLogin() ) ) {
+        if ( body.isFull() && !accountService.has( body.getLogin() ) ) {
 
-            final Account account = accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
+            final AccountService.Account account =
+                    accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
+
             session.setAttribute( ID_ATTR, account.getId() );
-            answerBody.addParameter( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
-            answerBody.addParameter( LOGIN_ATTR, account.getLogin() );
+            answerBody.addProperty( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
+            answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
             return ResponseEntity.ok( answerBody );
         }
 
@@ -103,7 +103,7 @@ public class AccountController {
     public ResponseEntity< AnswerBody > login( @RequestBody AccountBody body, HttpSession session ) {
 
         final AnswerBody answerBody = new AnswerBody();
-        final Account account = accountService.find( body.getLogin() );
+        final AccountService.Account account = accountService.find( body.getLogin() );
 
         if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
 
@@ -114,38 +114,35 @@ public class AccountController {
         return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
     }
 
-    /*!!!!!!!!!!!!!!!!!!!!!!
     @PostMapping( path = "/change/", consumes = "application/json", produces = "application/json" )
     public ResponseEntity< AnswerBody > changeUser( @RequestBody AccountBody body, HttpSession session ) {
 
         final AnswerBody answerBody = new AnswerBody();
 
-        if ( body.getId() == null ) {
+        if ( session.getAttribute( ID_ATTR ) == null ) {
+
+            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
+        }
+
+        final int id = ( Integer ) session.getAttribute( ID_ATTR );
+        final AccountService.Account account = accountService.find( id );
+
+        if ( account == null ) {
 
             return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( answerBody );
         }
 
-        final Account account = accountService.find( body.getId() );
+        if ( accountService.has( body.getLogin() ) ) {
 
-        if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
-
-            if ( account.getLogin() != null ) {
-
-                if ( accountService.find( account.getLogin() ) != null ) {
-
-                    answerBody.addParameter( LOGIN_ATTR, account.getLogin() );
-                    return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( answerBody );
-                }
-
-
-            }
-
-            session.setAttribute( ID_ATTR, account.getId() );
-            return ResponseEntity.ok( answerBody );
+            return ResponseEntity.status( HttpStatus.CONFLICT ).body( answerBody );
         }
 
-        return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
-    }*/
+        account.setProperties( body.getLogin(), body.getPassword(), body.getEmail() );
+        answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
+        answerBody.addProperty( PASSWORD_ATTR, account.getPassword() );
+        answerBody.addProperty( EMAIL_ATTR, account.getEmail() );
+        return ResponseEntity.ok( answerBody );
+    }
 
     @GetMapping( path = "/logout/" )
     public ResponseEntity logout( HttpSession session ) {
@@ -162,12 +159,12 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
-            final Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
+            final AccountService.Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
 
             if ( account != null ) {
 
-                answerBody.addParameter( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
-                answerBody.addParameter( LOGIN_ATTR, account.getLogin() );
+                answerBody.addProperty( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
+                answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
                 return ResponseEntity.ok( answerBody );
             }
         }
