@@ -62,6 +62,7 @@ public class AccountService {
             return email;
         }
 
+        //changes properties if they are not null
         public void setProperties( String login, String password, String email ) {
 
             if ( login != null ) {

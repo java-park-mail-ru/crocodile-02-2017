@@ -69,6 +69,11 @@ public class AccountController {
             return ( login != null ) && ( password != null ) && ( email != null );
         }
 
+        boolean isShort() {
+
+            return ( login != null ) && ( password != null );
+        }
+
         private String login;
         private String password;
         private String email;
@@ -79,23 +84,26 @@ public class AccountController {
 
         if ( body.isFull() ) {
 
-            if ( accountService.has( body.getLogin() ) ) {
-
-                return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
-            }
-
-            final AccountService.Account account =
-                    accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
-
-            session.setAttribute( ID_ATTR, account.getId() );
-            return ResponseEntity.ok( new AccountBody( account ) );
+            return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( new AccountBody() );
         }
 
-        return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( new AccountBody() );
+        if ( accountService.has( body.getLogin() ) ) {
+
+            return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
+        }
+
+        final AccountService.Account account = accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
+        session.setAttribute( ID_ATTR, account.getId() );
+        return ResponseEntity.ok( new AccountBody( account ) );
     }
 
     @PostMapping( path = "/login/", consumes = "application/json" )
     public ResponseEntity login( @RequestBody AccountBody body, HttpSession session ) {
+
+        if ( !body.isShort() ) {
+
+            return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( "" );
+        }
 
         final AccountService.Account account = accountService.find( body.getLogin() );
 
@@ -148,14 +156,16 @@ public class AccountController {
     @GetMapping( path = "/who-am-i/", produces = "application/json" )
     public ResponseEntity< AccountBody > getId( HttpSession session ) {
 
-        if ( session.getAttribute( ID_ATTR ) != null ) {
+        if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            final AccountService.Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
+            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
+        }
 
-            if ( account != null ) {
+        final AccountService.Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
 
-                return ResponseEntity.ok( new AccountBody( account ) );
-            }
+        if ( account != null ) {
+
+            return ResponseEntity.ok( new AccountBody( account ) );
         }
 
         return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( new AccountBody() );
