@@ -2,6 +2,7 @@ package server;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -15,6 +16,7 @@ public class AccountService {
     }
 
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger( 0 );
+    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
     @SuppressWarnings( "unused" )
     public final class Account {
@@ -25,7 +27,7 @@ public class AccountService {
                 @NotNull String email ) {
             this.id = ID_GENERATOR.getAndIncrement();
             this.login = login;
-            this.password = password;
+            this.passwordHash = ENCODER.encode( password );
             this.email = email;
         }
 
@@ -44,12 +46,12 @@ public class AccountService {
             return login;
         }
 
-        public void setPassword( @NotNull String password ) {
-            this.password = password;
+        public void setPasswordHash( @NotNull String password ) {
+            this.passwordHash = ENCODER.encode( password );
         }
 
-        public @NotNull String getPassword() {
-            return password;
+        public @NotNull String getPasswordHash() {
+            return passwordHash;
         }
 
         public void setEmail( @NotNull String email ) {
@@ -66,25 +68,25 @@ public class AccountService {
                 setLogin( login );
             }
             if ( password != null ) {
-                this.password = password;
+                this.passwordHash = password;
             }
             if ( email != null ) {
                 this.email = email;
             }
         }
 
-        public boolean passwordMatches( String other ) {
-            return password.equals( other );
+        public boolean passwordMatches( String password ) {
+            return ENCODER.matches( password, passwordHash );
         }
 
         @Override
         public String toString() {
-            return login + " :" + email;
+            return login + ": " + email;
         }
 
         private int id;
         private @NotNull String login;
-        private @NotNull String password;
+        private @NotNull String passwordHash;
         private @NotNull String email;
     }
 

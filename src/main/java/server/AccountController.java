@@ -9,10 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-import java.util.HashMap;
 
 @RestController
-@CrossOrigin( origins = "http://vstaem.herokuapp.com/" )
+@CrossOrigin( origins = { "http://vstaem.herokuapp.com/", "http://127.0.0.1" } )
 public class AccountController {
 
     private static final String ID_ATTR = "userId";
@@ -27,6 +26,7 @@ public class AccountController {
 
     private static class AccountBody {
 
+        @SuppressWarnings( "unused" )
         @JsonCreator
         AccountBody(
                 @JsonProperty( LOGIN_ATTR ) String login,
@@ -38,7 +38,21 @@ public class AccountController {
             this.email = email;
         }
 
-        String getLogin() {
+        AccountBody() {
+
+            this.login = null;
+            this.password = null;
+            this.email = null;
+        }
+
+        AccountBody( @NotNull AccountService.Account account ) {
+
+            this.login = account.getLogin();
+            this.password = null;
+            this.email = account.getEmail();
+        }
+
+        public String getLogin() {
             return login;
         }
 
@@ -50,7 +64,7 @@ public class AccountController {
             return email;
         }
 
-        public boolean isFull() {
+        boolean isFull() {
 
             return ( login != null ) && ( password != null ) && ( email != null );
         }
@@ -60,66 +74,46 @@ public class AccountController {
         private String email;
     }
 
-    @SuppressWarnings( "unused" )
-    private static class AnswerBody {
-
-        AnswerBody() {
-            properties = new HashMap< String, String >();
-        }
-
-        public void addProperty( @NotNull String name, String value ) {
-            properties.put( name, value );
-        }
-
-        public HashMap< String, String > getProperties() {
-            return new HashMap< String, String >( properties );
-        }
-
-        private HashMap< String, String > properties;
-    }
-
     @PostMapping( path = "/register/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity< AnswerBody > register( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity< AccountBody > register( @RequestBody AccountBody body, HttpSession session ) {
 
-        final AnswerBody answerBody = new AnswerBody();
+        if ( body.isFull() ) {
 
-        if ( body.isFull() && !accountService.has( body.getLogin() ) ) {
+            if ( accountService.has( body.getLogin() ) ) {
+
+                return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
+            }
 
             final AccountService.Account account =
                     accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
 
             session.setAttribute( ID_ATTR, account.getId() );
-            answerBody.addProperty( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
-            answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
-            return ResponseEntity.ok( answerBody );
+            return ResponseEntity.ok( new AccountBody( account ) );
         }
 
-        return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( answerBody );
+        return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( new AccountBody() );
     }
 
-    @PostMapping( path = "/login/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity< AnswerBody > login( @RequestBody AccountBody body, HttpSession session ) {
+    @PostMapping( path = "/login/", consumes = "application/json" )
+    public ResponseEntity login( @RequestBody AccountBody body, HttpSession session ) {
 
-        final AnswerBody answerBody = new AnswerBody();
         final AccountService.Account account = accountService.find( body.getLogin() );
 
         if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
 
             session.setAttribute( ID_ATTR, account.getId() );
-            return ResponseEntity.ok( answerBody );
+            return ResponseEntity.ok( "" );
         }
 
-        return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
+        return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( "" );
     }
 
     @PostMapping( path = "/change/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity< AnswerBody > changeUser( @RequestBody AccountBody body, HttpSession session ) {
-
-        final AnswerBody answerBody = new AnswerBody();
+    public ResponseEntity< AccountBody > changeUser( @RequestBody AccountBody body, HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( answerBody );
+            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
         }
 
         final int id = ( Integer ) session.getAttribute( ID_ATTR );
@@ -127,33 +121,32 @@ public class AccountController {
 
         if ( account == null ) {
 
-            return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( answerBody );
+            return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( new AccountBody() );
+        }
+
+        if ( account.getId() != id ) {
+
+            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
         }
 
         if ( accountService.has( body.getLogin() ) ) {
 
-            return ResponseEntity.status( HttpStatus.CONFLICT ).body( answerBody );
+            return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
         }
 
         account.setProperties( body.getLogin(), body.getPassword(), body.getEmail() );
-        answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
-        answerBody.addProperty( PASSWORD_ATTR, account.getPassword() );
-        answerBody.addProperty( EMAIL_ATTR, account.getEmail() );
-        return ResponseEntity.ok( answerBody );
+        return ResponseEntity.ok( new AccountBody( account ) );
     }
 
     @GetMapping( path = "/logout/" )
     public ResponseEntity logout( HttpSession session ) {
 
-        final AnswerBody answerBody = new AnswerBody();
         session.removeAttribute( ID_ATTR );
-        return ResponseEntity.ok( answerBody );
+        return ResponseEntity.ok( "" );
     }
 
     @GetMapping( path = "/who-am-i/", produces = "application/json" )
-    public ResponseEntity getId( HttpSession session ) {
-
-        final AnswerBody answerBody = new AnswerBody();
+    public ResponseEntity< AccountBody > getId( HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
@@ -161,13 +154,11 @@ public class AccountController {
 
             if ( account != null ) {
 
-                answerBody.addProperty( ID_ATTR, ( ( Integer ) account.getId() ).toString() );
-                answerBody.addProperty( LOGIN_ATTR, account.getLogin() );
-                return ResponseEntity.ok( answerBody );
+                return ResponseEntity.ok( new AccountBody( account ) );
             }
         }
 
-        return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( answerBody );
+        return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( new AccountBody() );
     }
 
     private AccountService accountService;
