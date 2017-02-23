@@ -45,6 +45,7 @@
             <artifactId>annotations</artifactId>
             <version>LATEST</version>
         </dependency>
+
     </dependencies>
 
 </project>
