@@ -38,13 +38,6 @@ public class AccountController {
             this.email = email;
         }
 
-        AccountBody() {
-
-            this.login = null;
-            this.password = null;
-            this.email = null;
-        }
-
         AccountBody( @NotNull AccountService.Account account ) {
 
             this.login = account.getLogin();
@@ -74,22 +67,56 @@ public class AccountController {
             return ( login != null ) && ( password != null );
         }
 
-        private String login;
-        private String password;
-        private String email;
+        private final String login;
+        private final String password;
+        private final String email;
+    }
+
+    private static class ErrorBody {
+
+        ErrorBody( HttpStatus code, String message ) {
+
+            this.code = code;
+            this.message = message;
+        }
+
+
+        @SuppressWarnings( "unused" )
+        public HttpStatus getCode() {
+            return code;
+        }
+
+        @SuppressWarnings( "unused" )
+        public String getMessage() {
+            return message;
+        }
+
+        private final HttpStatus code;
+        private final String message;
     }
 
     @PostMapping( path = "/register/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity< AccountBody > register( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity register( @RequestBody AccountBody body, HttpSession session ) {
 
-        if ( body.isFull() ) {
+        if ( session.getAttribute( ID_ATTR ) != null ) {
 
-            return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.CONFLICT )
+                    .body( new ErrorBody( HttpStatus.CONFLICT, "You must be logged out to perform this operation." ) );
+        }
+
+        if ( !body.isFull() ) {
+
+            return ResponseEntity
+                    .status( HttpStatus.BAD_REQUEST )
+                    .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
         }
 
         if ( accountService.has( body.getLogin() ) ) {
 
-            return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.CONFLICT )
+                    .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
         }
 
         final AccountService.Account account = accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
@@ -100,9 +127,18 @@ public class AccountController {
     @PostMapping( path = "/login/", consumes = "application/json" )
     public ResponseEntity login( @RequestBody AccountBody body, HttpSession session ) {
 
+        if ( session.getAttribute( ID_ATTR ) != null ) {
+
+            return ResponseEntity
+                    .status( HttpStatus.CONFLICT )
+                    .body( new ErrorBody( HttpStatus.CONFLICT, "You must be logged out to perform this operation." ) );
+        }
+
         if ( !body.isShort() ) {
 
-            return ResponseEntity.status( HttpStatus.BAD_REQUEST ).body( "" );
+            return ResponseEntity
+                    .status( HttpStatus.BAD_REQUEST )
+                    .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
         }
 
         final AccountService.Account account = accountService.find( body.getLogin() );
@@ -113,15 +149,19 @@ public class AccountController {
             return ResponseEntity.ok( "" );
         }
 
-        return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( "" );
+        return ResponseEntity
+                .status( HttpStatus.FORBIDDEN )
+                .body( new ErrorBody( HttpStatus.FORBIDDEN, "Login or password doesn't match." ) );
     }
 
     @PostMapping( path = "/change/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity< AccountBody > changeUser( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity changeUser( @RequestBody AccountBody body, HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.FORBIDDEN )
+                    .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged in to perform this operation." ) );
         }
 
         final int id = ( Integer ) session.getAttribute( ID_ATTR );
@@ -129,36 +169,37 @@ public class AccountController {
 
         if ( account == null ) {
 
-            return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( new AccountBody() );
-        }
-
-        if ( account.getId() != id ) {
-
-            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.NOT_FOUND )
+                    .body( new ErrorBody( HttpStatus.NOT_FOUND, "Your account is no longer valid." ) );
         }
 
         if ( accountService.has( body.getLogin() ) ) {
 
-            return ResponseEntity.status( HttpStatus.CONFLICT ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.CONFLICT )
+                    .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
         }
 
         account.setProperties( body.getLogin(), body.getPassword(), body.getEmail() );
         return ResponseEntity.ok( new AccountBody( account ) );
     }
 
-    @GetMapping( path = "/logout/" )
+    @PostMapping( path = "/logout/" )
     public ResponseEntity logout( HttpSession session ) {
 
-        session.removeAttribute( ID_ATTR );
+        session.invalidate();
         return ResponseEntity.ok( "" );
     }
 
     @GetMapping( path = "/who-am-i/", produces = "application/json" )
-    public ResponseEntity< AccountBody > getId( HttpSession session ) {
+    public ResponseEntity getId( HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            return ResponseEntity.status( HttpStatus.FORBIDDEN ).body( new AccountBody() );
+            return ResponseEntity
+                    .status( HttpStatus.FORBIDDEN )
+                    .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
         }
 
         final AccountService.Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
@@ -168,8 +209,10 @@ public class AccountController {
             return ResponseEntity.ok( new AccountBody( account ) );
         }
 
-        return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( new AccountBody() );
+        return ResponseEntity
+                .status( HttpStatus.NOT_FOUND )
+                .body( new ErrorBody( HttpStatus.NOT_FOUND, "Your account is no longer valid." ) );
     }
 
-    private AccountService accountService;
+    private final AccountService accountService;
 }
