@@ -85,7 +85,7 @@ public class AccountService {
             return login + ": " + email;
         }
 
-        private int id;
+        private final int id;
         private @NotNull String login;
         private @NotNull String passwordHash;
         private @NotNull String email;
@@ -122,5 +122,5 @@ public class AccountService {
         return ( this.find( login ) != null );
     }
 
-    private @NotNull HashMap< String, Account > accounts;
+    private final @NotNull HashMap< String, Account > accounts;
 }

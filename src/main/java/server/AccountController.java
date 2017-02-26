@@ -3,6 +3,8 @@ package server;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,8 @@ public class AccountController {
     private static final String LOGIN_ATTR = "login";
     private static final String PASSWORD_ATTR = "password";
     private static final String EMAIL_ATTR = "email";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger( AccountController.class );
 
     @Autowired
     public AccountController( AccountService accountService ) {
@@ -100,13 +104,15 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
+            LOGGER.error( "User #{} tried to register while he was logged in.", session.getAttribute( ID_ATTR ) );
             return ResponseEntity
-                    .status( HttpStatus.CONFLICT )
-                    .body( new ErrorBody( HttpStatus.CONFLICT, "You must be logged out to perform this operation." ) );
+                    .status( HttpStatus.FORBIDDEN )
+                    .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
         }
 
         if ( !body.isFull() ) {
 
+            LOGGER.error( "Not all neccessary fields were provided for registration." );
             return ResponseEntity
                     .status( HttpStatus.BAD_REQUEST )
                     .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
@@ -114,12 +120,14 @@ public class AccountController {
 
         if ( accountService.has( body.getLogin() ) ) {
 
+            LOGGER.error( "User with login {} is already registered.", body.getLogin() );
             return ResponseEntity
                     .status( HttpStatus.CONFLICT )
                     .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
         }
 
         final AccountService.Account account = accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
+        LOGGER.info( "User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail() );
         session.setAttribute( ID_ATTR, account.getId() );
         return ResponseEntity.ok( new AccountBody( account ) );
     }
@@ -129,6 +137,7 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
+            LOGGER.error( "User #{} tried to login while he was logged in.", session.getAttribute( ID_ATTR ) );
             return ResponseEntity
                     .status( HttpStatus.CONFLICT )
                     .body( new ErrorBody( HttpStatus.CONFLICT, "You must be logged out to perform this operation." ) );
@@ -136,6 +145,7 @@ public class AccountController {
 
         if ( !body.isShort() ) {
 
+            LOGGER.error( "Not all neccessary fields were provided for logging in." );
             return ResponseEntity
                     .status( HttpStatus.BAD_REQUEST )
                     .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
@@ -145,10 +155,12 @@ public class AccountController {
 
         if ( ( account != null ) && ( account.passwordMatches( body.getPassword() ) ) ) {
 
+            LOGGER.info( "User #{} logged in.", account.getId() );
             session.setAttribute( ID_ATTR, account.getId() );
             return ResponseEntity.ok( "" );
         }
 
+        LOGGER.error( "Invalid credentials {}, {} for logging in.", body.getLogin(), body.getPassword() );
         return ResponseEntity
                 .status( HttpStatus.FORBIDDEN )
                 .body( new ErrorBody( HttpStatus.FORBIDDEN, "Login or password doesn't match." ) );
@@ -159,6 +171,7 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
+            LOGGER.error( "Unlogged user tried to change credentials." );
             return ResponseEntity
                     .status( HttpStatus.FORBIDDEN )
                     .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged in to perform this operation." ) );
@@ -169,24 +182,32 @@ public class AccountController {
 
         if ( account == null ) {
 
+            LOGGER.error( "Account #{} is no longer valid.", id );
             return ResponseEntity
                     .status( HttpStatus.NOT_FOUND )
                     .body( new ErrorBody( HttpStatus.NOT_FOUND, "Your account is no longer valid." ) );
         }
 
-        if ( accountService.has( body.getLogin() ) ) {
+        if ( !body.getLogin().equals( account.getLogin() ) && accountService.has( body.getLogin() ) ) {
 
+            LOGGER.error( "Login {} to change on is already taken.", body.getLogin() );
             return ResponseEntity
                     .status( HttpStatus.CONFLICT )
                     .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
         }
 
+        LOGGER.info( "User #{} was changed.", account.getId() );
         account.setProperties( body.getLogin(), body.getPassword(), body.getEmail() );
         return ResponseEntity.ok( new AccountBody( account ) );
     }
 
     @PostMapping( path = "/logout/" )
     public ResponseEntity logout( HttpSession session ) {
+
+        if ( session.getAttribute( ID_ATTR ) != null ) {
+
+            LOGGER.info( "User #{} logged out.", session.getAttribute( ID_ATTR ) );
+        }
 
         session.invalidate();
         return ResponseEntity.ok( "" );
@@ -197,18 +218,22 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
+            LOGGER.error( "Unlogged user tried to get his credentials." );
             return ResponseEntity
                     .status( HttpStatus.FORBIDDEN )
                     .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
         }
 
-        final AccountService.Account account = accountService.find( ( Integer ) session.getAttribute( ID_ATTR ) );
+        final int id = ( Integer ) session.getAttribute( ID_ATTR );
+        final AccountService.Account account = accountService.find( id );
 
         if ( account != null ) {
 
+            LOGGER.info( "Credentials were sent to user #{}.", account.getId() );
             return ResponseEntity.ok( new AccountBody( account ) );
         }
 
+        LOGGER.error( "Account #{} is no longer valid.", id );
         return ResponseEntity
                 .status( HttpStatus.NOT_FOUND )
                 .body( new ErrorBody( HttpStatus.NOT_FOUND, "Your account is no longer valid." ) );
