@@ -11,16 +11,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class AccountService {
 
-    private static final AtomicInteger ID_GENERATOR = new AtomicInteger( 0 );
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger(0);
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
-    private final @NotNull HashMap< String, Account > accounts;
+    private final @NotNull HashMap<String, Account> accounts;
 
     public AccountService() {
-        accounts = new HashMap< String, Account >();
+        accounts = new HashMap<String, Account>();
     }
 
-    @SuppressWarnings( "unused" )
+    @SuppressWarnings("unused")
     public final class Account {
 
         private final int id;
@@ -31,10 +31,10 @@ public class AccountService {
         private Account(
                 @NotNull String login,
                 @NotNull String password,
-                @NotNull String email ) {
+                @NotNull String email) {
             this.id = ID_GENERATOR.getAndIncrement();
             this.login = login;
-            this.passwordHash = ENCODER.encode( password );
+            this.passwordHash = ENCODER.encode(password);
             this.email = email;
         }
 
@@ -42,26 +42,26 @@ public class AccountService {
             return id;
         }
 
-        public void setLogin( @NotNull String login ) {
+        public void setLogin(@NotNull String login) {
 
-            AccountService.this.accounts.remove( this.login );
+            AccountService.this.accounts.remove(this.login);
             this.login = login;
-            AccountService.this.accounts.put( login, this );
+            AccountService.this.accounts.put(login, this);
         }
 
         public @NotNull String getLogin() {
             return login;
         }
 
-        public void setPasswordHash( @NotNull String password ) {
-            this.passwordHash = ENCODER.encode( password );
+        public void setPasswordHash(@NotNull String password) {
+            this.passwordHash = ENCODER.encode(password);
         }
 
         public @NotNull String getPasswordHash() {
             return passwordHash;
         }
 
-        public void setEmail( @NotNull String email ) {
+        public void setEmail(@NotNull String email) {
             this.email = email;
         }
 
@@ -70,21 +70,21 @@ public class AccountService {
         }
 
         //changes properties if they are not null
-        public void setProperties( String login, String password, String email ) {
+        public void setProperties(String login, String password, String email) {
 
-            if ( login != null ) {
-                setLogin( login );
+            if (login != null) {
+                setLogin(login);
             }
-            if ( password != null ) {
+            if (password != null) {
                 this.passwordHash = password;
             }
-            if ( email != null ) {
+            if (email != null) {
                 this.email = email;
             }
         }
 
-        public boolean passwordMatches( String password ) {
-            return ENCODER.matches( password, passwordHash );
+        public boolean passwordMatches(String password) {
+            return ENCODER.matches(password, passwordHash);
         }
 
         @Override
@@ -96,17 +96,17 @@ public class AccountService {
     public @NotNull Account addAccount(
             @NotNull String login,
             @NotNull String password,
-            @NotNull String email ) {
-        final Account account = new Account( login, password, email );
-        accounts.put( login, account );
+            @NotNull String email) {
+        final Account account = new Account(login, password, email);
+        accounts.put(login, account);
         return account;
     }
 
-    public @Nullable Account find( int id ) {
+    public @Nullable Account find(int id) {
 
-        for ( Account account : accounts.values() ) {
+        for (Account account : accounts.values()) {
 
-            if ( account.getId() == id ) {
+            if (account.getId() == id) {
 
                 return account;
             }
@@ -115,12 +115,12 @@ public class AccountService {
         return null;
     }
 
-    public @Nullable Account find( String login ) {
+    public @Nullable Account find(String login) {
 
-        return accounts.get( login );
+        return accounts.get(login);
     }
 
-    public boolean has( String login ) {
-        return ( this.find( login ) != null );
+    public boolean has(String login) {
+        return (this.find(login) != null);
     }
 }
