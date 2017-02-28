@@ -11,15 +11,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class AccountService {
 
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger( 0 );
+    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+
+    private final @NotNull HashMap< String, Account > accounts;
+
     public AccountService() {
         accounts = new HashMap< String, Account >();
     }
 
-    private static final AtomicInteger ID_GENERATOR = new AtomicInteger( 0 );
-    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
-
     @SuppressWarnings( "unused" )
     public final class Account {
+
+        private final int id;
+        private @NotNull String login;
+        private @NotNull String passwordHash;
+        private @NotNull String email;
 
         private Account(
                 @NotNull String login,
@@ -84,11 +91,6 @@ public class AccountService {
         public String toString() {
             return login + ": " + email;
         }
-
-        private final int id;
-        private @NotNull String login;
-        private @NotNull String passwordHash;
-        private @NotNull String email;
     }
 
     public @NotNull Account addAccount(
@@ -121,6 +123,4 @@ public class AccountService {
     public boolean has( String login ) {
         return ( this.find( login ) != null );
     }
-
-    private final @NotNull HashMap< String, Account > accounts;
 }

@@ -13,26 +13,31 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 
 @RestController
-@CrossOrigin( origins = { "http://vstaem.herokuapp.com/", "https://vstaem.herokuapp/com/", "http://127.0.0.1" } )
+@CrossOrigin( origins = { "http://vstaem.herokuapp.com/", "https://vstaem.herokuapp.com/" } )
 public class AccountController {
 
     private static final String ID_ATTR = "userId";
     private static final String LOGIN_ATTR = "login";
     private static final String PASSWORD_ATTR = "password";
     private static final String EMAIL_ATTR = "email";
-
     private static final Logger LOGGER = LoggerFactory.getLogger( AccountController.class );
+
+    private final AccountService accountService;
 
     @Autowired
     public AccountController( AccountService accountService ) {
         this.accountService = accountService;
     }
 
-    private static class AccountBody {
+    private static class AccountData {
+
+        private final String login;
+        private final String password;
+        private final String email;
 
         @SuppressWarnings( "unused" )
         @JsonCreator
-        AccountBody(
+        AccountData(
                 @JsonProperty( LOGIN_ATTR ) String login,
                 @JsonProperty( PASSWORD_ATTR ) String password,
                 @JsonProperty( EMAIL_ATTR ) String email ) {
@@ -42,7 +47,7 @@ public class AccountController {
             this.email = email;
         }
 
-        AccountBody( @NotNull AccountService.Account account ) {
+        AccountData( @NotNull AccountService.Account account ) {
 
             this.login = account.getLogin();
             this.password = null;
@@ -70,10 +75,6 @@ public class AccountController {
 
             return ( login != null ) && ( password != null );
         }
-
-        private final String login;
-        private final String password;
-        private final String email;
     }
 
     private static class ErrorBody {
@@ -100,11 +101,11 @@ public class AccountController {
     }
 
     @PostMapping( path = "/register/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity register( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity register( @RequestBody AccountData body, HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
-            LOGGER.error( "User #{} tried to register while he was logged in.", session.getAttribute( ID_ATTR ) );
+            LOGGER.debug( "User #{} tried to register while he was logged in.", session.getAttribute( ID_ATTR ) );
             return ResponseEntity
                     .status( HttpStatus.FORBIDDEN )
                     .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
@@ -112,7 +113,7 @@ public class AccountController {
 
         if ( !body.isFull() ) {
 
-            LOGGER.error( "Not all neccessary fields were provided for registration." );
+            LOGGER.debug( "Not all neccessary fields were provided for registration." );
             return ResponseEntity
                     .status( HttpStatus.BAD_REQUEST )
                     .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
@@ -120,7 +121,7 @@ public class AccountController {
 
         if ( accountService.has( body.getLogin() ) ) {
 
-            LOGGER.error( "User with login {} is already registered.", body.getLogin() );
+            LOGGER.debug( "User with login {} is already registered.", body.getLogin() );
             return ResponseEntity
                     .status( HttpStatus.CONFLICT )
                     .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
@@ -129,23 +130,23 @@ public class AccountController {
         final AccountService.Account account = accountService.addAccount( body.getLogin(), body.getPassword(), body.getEmail() );
         LOGGER.info( "User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail() );
         session.setAttribute( ID_ATTR, account.getId() );
-        return ResponseEntity.ok( new AccountBody( account ) );
+        return ResponseEntity.ok( new AccountData( account ) );
     }
 
     @PostMapping( path = "/login/", consumes = "application/json" )
-    public ResponseEntity login( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity login( @RequestBody AccountData body, HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) != null ) {
 
-            LOGGER.error( "User #{} tried to login while he was logged in.", session.getAttribute( ID_ATTR ) );
+            LOGGER.debug( "User #{} tried to login while he was logged in.", session.getAttribute( ID_ATTR ) );
             return ResponseEntity
-                    .status( HttpStatus.CONFLICT )
-                    .body( new ErrorBody( HttpStatus.CONFLICT, "You must be logged out to perform this operation." ) );
+                    .status( HttpStatus.FORBIDDEN )
+                    .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
         }
 
         if ( !body.isShort() ) {
 
-            LOGGER.error( "Not all neccessary fields were provided for logging in." );
+            LOGGER.debug( "Not all neccessary fields were provided for logging in." );
             return ResponseEntity
                     .status( HttpStatus.BAD_REQUEST )
                     .body( new ErrorBody( HttpStatus.BAD_REQUEST, "Not all fields were provided." ) );
@@ -160,18 +161,18 @@ public class AccountController {
             return ResponseEntity.ok( "" );
         }
 
-        LOGGER.error( "Invalid credentials {}, {} for logging in.", body.getLogin(), body.getPassword() );
+        LOGGER.debug( "Invalid credentials {}, {} for logging in.", body.getLogin(), body.getPassword() );
         return ResponseEntity
                 .status( HttpStatus.FORBIDDEN )
                 .body( new ErrorBody( HttpStatus.FORBIDDEN, "Login or password doesn't match." ) );
     }
 
     @PostMapping( path = "/change/", consumes = "application/json", produces = "application/json" )
-    public ResponseEntity changeUser( @RequestBody AccountBody body, HttpSession session ) {
+    public ResponseEntity changeUser( @RequestBody AccountData body, HttpSession session ) {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            LOGGER.error( "Unlogged user tried to change credentials." );
+            LOGGER.debug( "Unlogged user tried to change credentials." );
             return ResponseEntity
                     .status( HttpStatus.FORBIDDEN )
                     .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged in to perform this operation." ) );
@@ -190,7 +191,7 @@ public class AccountController {
 
         if ( !body.getLogin().equals( account.getLogin() ) && accountService.has( body.getLogin() ) ) {
 
-            LOGGER.error( "Login {} to change on is already taken.", body.getLogin() );
+            LOGGER.debug( "Login {} to change on is already taken.", body.getLogin() );
             return ResponseEntity
                     .status( HttpStatus.CONFLICT )
                     .body( new ErrorBody( HttpStatus.CONFLICT, "Login is already taken." ) );
@@ -198,7 +199,7 @@ public class AccountController {
 
         LOGGER.info( "User #{} was changed.", account.getId() );
         account.setProperties( body.getLogin(), body.getPassword(), body.getEmail() );
-        return ResponseEntity.ok( new AccountBody( account ) );
+        return ResponseEntity.ok( new AccountData( account ) );
     }
 
     @PostMapping( path = "/logout/" )
@@ -218,7 +219,7 @@ public class AccountController {
 
         if ( session.getAttribute( ID_ATTR ) == null ) {
 
-            LOGGER.error( "Unlogged user tried to get his credentials." );
+            LOGGER.debug( "Unlogged user tried to get his credentials." );
             return ResponseEntity
                     .status( HttpStatus.FORBIDDEN )
                     .body( new ErrorBody( HttpStatus.FORBIDDEN, "You must be logged out to perform this operation." ) );
@@ -230,7 +231,7 @@ public class AccountController {
         if ( account != null ) {
 
             LOGGER.info( "Credentials were sent to user #{}.", account.getId() );
-            return ResponseEntity.ok( new AccountBody( account ) );
+            return ResponseEntity.ok( new AccountData( account ) );
         }
 
         LOGGER.error( "Account #{} is no longer valid.", id );
@@ -238,6 +239,4 @@ public class AccountController {
                 .status( HttpStatus.NOT_FOUND )
                 .body( new ErrorBody( HttpStatus.NOT_FOUND, "Your account is no longer valid." ) );
     }
-
-    private final AccountService accountService;
 }
