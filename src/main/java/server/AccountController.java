@@ -47,7 +47,7 @@ public class AccountController {
             this.email = email;
         }
 
-        AccountData(@NotNull AccountService.Account account) {
+        AccountData(@NotNull Account account) {
 
             this.login = account.getLogin();
             this.password = null;
@@ -127,7 +127,7 @@ public class AccountController {
                     .body(new ErrorBody(HttpStatus.FORBIDDEN, "Login is already taken."));
         }
 
-        final AccountService.Account account = accountService.addAccount(body.getLogin(), body.getPassword(), body.getEmail());
+        final Account account = accountService.addAccount(body.getLogin(), body.getPassword(), body.getEmail());
         LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
         session.setAttribute(ID_ATTR, account.getId());
         return ResponseEntity.ok(new AccountData(account));
@@ -152,7 +152,7 @@ public class AccountController {
                     .body(new ErrorBody(HttpStatus.BAD_REQUEST, "Not all fields were provided."));
         }
 
-        final AccountService.Account account = accountService.find(body.getLogin());
+        final Account account = accountService.find(body.getLogin());
 
         if ((account != null) && (account.passwordMatches(body.getPassword()))) {
 
@@ -179,7 +179,7 @@ public class AccountController {
         }
 
         final int id = ( Integer ) session.getAttribute(ID_ATTR);
-        final AccountService.Account account = accountService.find(id);
+        final Account account = accountService.find(id);
 
         if (account == null) {
 
@@ -197,8 +197,8 @@ public class AccountController {
                     .body(new ErrorBody(HttpStatus.FORBIDDEN, "Login is already taken."));
         }
 
-        LOGGER.info("User #{} was changed.", account.getId());
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
+        LOGGER.info("User #{}-> {}, {} was changed.", account.getId(), account.getLogin(), account.getEmail());
         return ResponseEntity.ok(new AccountData(account));
     }
 
@@ -226,7 +226,7 @@ public class AccountController {
         }
 
         final int id = ( Integer ) session.getAttribute(ID_ATTR);
-        final AccountService.Account account = accountService.find(id);
+        final Account account = accountService.find(id);
 
         if (account != null) {
 
