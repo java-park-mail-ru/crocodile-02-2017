@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpSession;
 
 @RestController
-@CrossOrigin(origins = {"http://vstaem.herokuapp.com/", "https://vstaem.herokuapp.com/", "http://localhost", "http://127.0.0.1"})
+@CrossOrigin( origins = {
+        "http://vstaem.herokuapp.com/", "https://vstaem.herokuapp.com/", "http://vstaem-dev.herokuapp.com/",
+        "http://localhost", "http://127.0.0.1" } )
 public class AccountController {
 
     private static final String ID_ATTR = "userId";
