@@ -14,7 +14,7 @@ import javax.servlet.http.HttpSession;
 
 @RestController
 @CrossOrigin( origins = {
-        "http://vstaem.herokuapp.com/", "https://vstaem.herokuapp.com/", "http://vstaem-dev.herokuapp.com/", "https://vstaem-dev.herokuapp.com/",
+        "http://vstaem.herokuapp.com", "https://vstaem.herokuapp.com", "http://vstaem-dev.herokuapp.com", "https://vstaem-dev.herokuapp.com",
         "http://localhost", "http://127.0.0.1" } )
 public class AccountController {
 
