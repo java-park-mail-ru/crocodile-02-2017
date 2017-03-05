@@ -5,8 +5,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings("unused")
-public class Account {
+@SuppressWarnings({"unused", "ComparableImplementedButEqualsNotOverridden"})
+public class Account implements Comparable<Account> {
 
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(0);
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
@@ -15,6 +15,7 @@ public class Account {
     private @NotNull String login;
     private @NotNull String passwordHash;
     private @NotNull String email;
+    private int rating;
     private final @NotNull AccountService database;
 
     public Account(
@@ -27,6 +28,7 @@ public class Account {
         this.passwordHash = ENCODER.encode(password);
         this.email = email;
         this.database = database;
+        this.rating = 0;
     }
 
     public int getId() {
@@ -60,6 +62,14 @@ public class Account {
         return email;
     }
 
+    public void setRating(int rating) {
+        this.rating = rating;
+    }
+
+    public int getRating() {
+        return rating;
+    }
+
     //changes properties if they are not null
     public void setProperties(String login, String password, String email) {
 
@@ -81,5 +91,10 @@ public class Account {
     @Override
     public String toString() {
         return login + ": " + email;
+    }
+
+    @Override
+    public int compareTo(@NotNull Account other) {
+        return this.rating - other.rating;
     }
 }

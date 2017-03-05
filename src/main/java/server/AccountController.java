@@ -11,11 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.util.stream.Collectors;
 
 @RestController
-@CrossOrigin( origins = {
+@CrossOrigin(origins = {
         "http://vstaem.herokuapp.com", "https://vstaem.herokuapp.com", "http://vstaem-dev.herokuapp.com", "https://vstaem-dev.herokuapp.com",
-        "http://localhost", "http://127.0.0.1" } )
+        "http://localhost", "http://127.0.0.1"})
 public class AccountController {
 
     private static final String ID_ATTR = "userId";
@@ -31,13 +32,14 @@ public class AccountController {
         this.accountService = accountService;
     }
 
+    @SuppressWarnings("unused")
     private static class AccountData {
 
         private final String login;
         private final String password;
         private final String email;
+        private int rating;
 
-        @SuppressWarnings("unused")
         @JsonCreator
         AccountData(
                 @JsonProperty(LOGIN_ATTR) String login,
@@ -47,6 +49,7 @@ public class AccountController {
             this.login = login;
             this.password = password;
             this.email = email;
+            this.rating = 0;
         }
 
         AccountData(@NotNull Account account) {
@@ -54,6 +57,7 @@ public class AccountController {
             this.login = account.getLogin();
             this.password = null;
             this.email = account.getEmail();
+            this.rating = account.getRating();
         }
 
         public String getLogin() {
@@ -66,6 +70,10 @@ public class AccountController {
 
         public String getEmail() {
             return email;
+        }
+
+        public int getRating() {
+            return rating;
         }
 
         boolean isFull() {
@@ -217,7 +225,7 @@ public class AccountController {
     }
 
     @GetMapping(path = "/who-am-i/", produces = "application/json")
-    public ResponseEntity getId(HttpSession session) {
+    public ResponseEntity getInfo(HttpSession session) {
 
         if (session.getAttribute(ID_ATTR) == null) {
 
@@ -240,5 +248,11 @@ public class AccountController {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorBody(HttpStatus.NOT_FOUND, "Your account is no longer valid."));
+    }
+
+    @GetMapping(path = "/best/", produces = "application/json")
+    public ResponseEntity getBest() {
+
+        return ResponseEntity.ok(accountService.getBest().stream().map(AccountData::new).collect(Collectors.toSet()));
     }
 }
