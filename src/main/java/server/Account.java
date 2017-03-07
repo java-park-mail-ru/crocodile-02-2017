@@ -95,6 +95,8 @@ public class Account implements Comparable<Account> {
 
     @Override
     public int compareTo(@NotNull Account other) {
-        return this.rating - other.rating;
+        return this.rating == other.rating ?
+                this.login.compareTo( other.login ) :
+                this.rating - other.rating;
     }
 }
