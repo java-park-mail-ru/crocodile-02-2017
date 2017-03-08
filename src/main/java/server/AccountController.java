@@ -81,11 +81,16 @@ public class AccountController {
         boolean satisfiesRegistration() {
 
             final boolean allFieldsProvided = (login != null) && (password != null) && (email != null);
-            return allFieldsProvided && (password.length() > PASSWORD_MIN_LENGTH) && (email.contains("@"));
+            return allFieldsProvided && (password.length() >= PASSWORD_MIN_LENGTH) && (email.contains("@"));
         }
 
         boolean satisfiesLoggingIn() {
             return (login != null) && (password != null);
+        }
+
+        boolean satisfiesChanges() {
+
+            return ( password == null ) || ( password.length() >= PASSWORD_MIN_LENGTH );
         }
     }
 
@@ -148,7 +153,7 @@ public class AccountController {
             LOGGER.debug("Not all neccessary fields were provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not all fields were provided."));
+                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Incorrect registration information was provided."));
         }
 
         if (accountService.has(body.getLogin())) {
@@ -181,7 +186,7 @@ public class AccountController {
             LOGGER.debug("Not all neccessary fields were provided for logging in.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not all fields were provided."));
+                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Incorrect signing in information was provided."));
         }
 
         final Account account = accountService.find(body.getLogin());
@@ -227,6 +232,14 @@ public class AccountController {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(new ErrorBody(ErrorCode.EXISTS, "Login is already taken."));
+        }
+
+        if (!body.satisfiesChanges()) {
+
+            LOGGER.debug("Password to change on is incorrect");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body( new ErrorBody(ErrorCode.BAD_DATA, "Your password is too short."));
         }
 
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
