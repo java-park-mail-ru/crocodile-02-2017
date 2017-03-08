@@ -150,10 +150,10 @@ public class AccountController {
 
         if (!body.satisfiesRegistration()) {
 
-            LOGGER.debug("Not all neccessary fields were provided for registration.");
+            LOGGER.debug("Not valid information was provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Incorrect registration information was provided."));
+                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not valid registration information was provided."));
         }
 
         if (accountService.has(body.getLogin())) {
@@ -183,10 +183,10 @@ public class AccountController {
 
         if (!body.satisfiesLoggingIn()) {
 
-            LOGGER.debug("Not all neccessary fields were provided for logging in.");
+            LOGGER.debug("Not valid information was provided for logging in.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Incorrect signing in information was provided."));
+                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not valid signing in information was provided."));
         }
 
         final Account account = accountService.find(body.getLogin());
@@ -236,10 +236,10 @@ public class AccountController {
 
         if (!body.satisfiesChanges()) {
 
-            LOGGER.debug("Password to change on is incorrect");
+            LOGGER.debug("Password to change on is incorrect.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body( new ErrorBody(ErrorCode.BAD_DATA, "Your password is too short."));
+                    .body( new ErrorBody(ErrorCode.BAD_DATA, "Password to change on is too short."));
         }
 
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
@@ -287,7 +287,6 @@ public class AccountController {
 
     @GetMapping(path = "/best/", produces = "application/json")
     public ResponseEntity getBest() {
-
         return ResponseEntity.ok(accountService.getBest().stream().map(AccountData::new).collect(Collectors.toSet()));
     }
 }
