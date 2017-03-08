@@ -1,8 +1,5 @@
 package server;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,88 +17,26 @@ import java.util.stream.Collectors;
 public class AccountController {
 
     private static final String ID_ATTR = "userId";
-    private static final String LOGIN_ATTR = "login";
-    private static final String PASSWORD_ATTR = "password";
-    private static final String EMAIL_ATTR = "email";
     private static final Logger LOGGER = LoggerFactory.getLogger(AccountController.class);
 
     private final AccountService accountService;
+    private final ValidatorService validatorService;
 
     @Autowired
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, ValidatorService validatorService) {
         this.accountService = accountService;
-    }
-
-    @SuppressWarnings("unused")
-    private static class AccountData {
-
-        private static final int PASSWORD_MIN_LENGTH = 6;
-
-        private final String login;
-        private final String password;
-        private final String email;
-        private int rating;
-
-        @JsonCreator
-        AccountData(
-                @JsonProperty(LOGIN_ATTR) String login,
-                @JsonProperty(PASSWORD_ATTR) String password,
-                @JsonProperty(EMAIL_ATTR) String email) {
-
-            this.login = login;
-            this.password = password;
-            this.email = email;
-            this.rating = 0;
-        }
-
-        AccountData(@NotNull Account account) {
-
-            this.login = account.getLogin();
-            this.password = null;
-            this.email = account.getEmail();
-            this.rating = account.getRating();
-        }
-
-        public String getLogin() {
-            return login;
-        }
-
-        String getPassword() {
-            return password;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public int getRating() {
-            return rating;
-        }
-
-        boolean satisfiesRegistration() {
-
-            final boolean allFieldsProvided = (login != null) && (password != null) && (email != null);
-            return allFieldsProvided && (password.length() >= PASSWORD_MIN_LENGTH) && (email.contains("@"));
-        }
-
-        boolean satisfiesLoggingIn() {
-            return (login != null) && (password != null);
-        }
-
-        boolean satisfiesChanges() {
-
-            return ( password == null ) || ( password.length() >= PASSWORD_MIN_LENGTH );
-        }
+        this.validatorService = validatorService;
     }
 
     private enum ErrorCode {
 
-        BAD_DATA("bad_data"),
+        INSUFFICIENT("insufficient"),
         LOG_OUT("log_out"),
         EXISTS("exists"),
         FORBIDDEN("forbidden"),
         LOG_IN("log_in"),
-        NOT_FOUND("not_found");
+        NOT_FOUND("not_found"),
+        INVALID_FIELD("invalid_field");
 
         private String text;
 
@@ -148,12 +83,12 @@ public class AccountController {
                     .body(new ErrorBody(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
         }
 
-        if (!body.satisfiesRegistration()) {
+        if (!validatorService.hasRegistrationFields(body)) {
 
-            LOGGER.debug("Not valid information was provided for registration.");
+            LOGGER.debug("Not all fields were provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not valid registration information was provided."));
+                    .body(new ErrorBody(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
         if (accountService.has(body.getLogin())) {
@@ -162,6 +97,22 @@ public class AccountController {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(new ErrorBody(ErrorCode.EXISTS, "Login is already taken."));
+        }
+
+        if (!validatorService.passwordValid(body)) {
+
+            LOGGER.debug("Invalid password was provided for registration.");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
+        }
+
+        if (!validatorService.emailValid(body)) {
+
+            LOGGER.debug("Invalid email was provided for registration.");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
         final Account account = accountService.addAccount(body.getLogin(), body.getPassword(), body.getEmail());
@@ -181,12 +132,12 @@ public class AccountController {
                     .body(new ErrorBody(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
         }
 
-        if (!body.satisfiesLoggingIn()) {
+        if (!validatorService.hasLoggingInFields(body)) {
 
-            LOGGER.debug("Not valid information was provided for logging in.");
+            LOGGER.debug("Not all fields were provided for logging in.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.BAD_DATA, "Not valid signing in information was provided."));
+                    .body(new ErrorBody(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
         final Account account = accountService.find(body.getLogin());
@@ -234,12 +185,20 @@ public class AccountController {
                     .body(new ErrorBody(ErrorCode.EXISTS, "Login is already taken."));
         }
 
-        if (!body.satisfiesChanges()) {
+        if (body.hasPassword() && !validatorService.passwordValid(body)) {
 
-            LOGGER.debug("Password to change on is incorrect.");
+            LOGGER.debug("Invalid password was provided for changing.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body( new ErrorBody(ErrorCode.BAD_DATA, "Password to change on is too short."));
+                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
+        }
+
+        if (body.hasEmail() && !validatorService.emailValid(body)) {
+
+            LOGGER.debug("Invalid email was provided for changing.");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
