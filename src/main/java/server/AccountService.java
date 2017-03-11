@@ -4,7 +4,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 @Service
 public class AccountService {
@@ -49,7 +52,7 @@ public class AccountService {
 
     public SortedSet<Account> getBest() {
 
-        final NavigableSet<Account> bestPlayers = new TreeSet<>(accounts.values()).descendingSet();
+        final TreeSet<Account> bestPlayers = new TreeSet<>(accounts.values());
         while (bestPlayers.size() > BEST_COUNT) {
 
             bestPlayers.remove(bestPlayers.last());

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 @RestController
@@ -246,6 +247,6 @@ public class AccountController {
 
     @GetMapping(path = "/best/", produces = "application/json")
     public ResponseEntity getBest() {
-        return ResponseEntity.ok(accountService.getBest().stream().map(AccountData::new).collect(Collectors.toSet()));
+        return ResponseEntity.ok(accountService.getBest().stream().map(AccountData::new).collect(Collectors.toCollection(LinkedHashSet::new)));
     }
 }
