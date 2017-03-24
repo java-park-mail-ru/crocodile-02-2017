@@ -48,8 +48,8 @@ public class InterfaceTest {
         final int minLength = Validator.PASSWORD_MIN_LENGTH;
         final int length = new Random().nextInt(10) + minLength;
         return (isValid) ?
-                RandomStringUtils.randomAlphanumeric(length) :
-                RandomStringUtils.randomAlphanumeric(minLength - 1);
+            RandomStringUtils.randomAlphanumeric(length) :
+            RandomStringUtils.randomAlphanumeric(minLength - 1);
     }
 
     private String generateEmail(boolean isValid) {
@@ -58,8 +58,8 @@ public class InterfaceTest {
         final int length = new Random().nextInt(6) + minLength;
         final String email = RandomStringUtils.randomAlphanumeric(length) + '@' + RandomStringUtils.randomAlphanumeric(length).toLowerCase() + ".ru";
         return (isValid) ?
-                email :
-                email.replace('@', '0');
+            email :
+            email.replace('@', '0');
     }
 
     ///////////////////////////////////
@@ -72,29 +72,29 @@ public class InterfaceTest {
 
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
         data = new AccountData(generateLogin(), null, generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
         data = new AccountData(null, generatePassword(true), generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
     }
 
     @Test
@@ -104,11 +104,11 @@ public class InterfaceTest {
         final AccountData data = new AccountData(generateLogin(), generatePassword(false), generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
     @Test
@@ -118,11 +118,11 @@ public class InterfaceTest {
         final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(false));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
     @Test
@@ -132,12 +132,12 @@ public class InterfaceTest {
         final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
+            .perform(post("/register/")
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
     }
 
     @Test
@@ -150,11 +150,11 @@ public class InterfaceTest {
         accountService.createAccount(username, generatePassword(true), generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
     }
 
     @Test
@@ -164,13 +164,13 @@ public class InterfaceTest {
         final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
 
         mvc
-                .perform(post("/register/")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(data)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
-                .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
-                .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
+            .perform(post("/register/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
+            .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
+            .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
     }
 
     ///////////////////////////////////
@@ -184,8 +184,8 @@ public class InterfaceTest {
     public void testWhoAmINotLoggedIn() throws Exception {
 
         mvc
-                .perform(get("/who-am-i/"))
-                .andExpect(status().isForbidden());
+            .perform(get("/who-am-i/"))
+            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -193,8 +193,8 @@ public class InterfaceTest {
 
         final String username = "a";
         mvc
-                .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, username))
-                .andExpect(status().isNotFound());
+            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, username))
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -203,9 +203,9 @@ public class InterfaceTest {
         final String username = "a";
         accountService.createAccount(username, "b", "c");
         mvc
-                .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, username))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("login").value(username));
+            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, username))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("login").value(username));
     }
 
     @After

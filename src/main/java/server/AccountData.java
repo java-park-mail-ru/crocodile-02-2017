@@ -22,9 +22,9 @@ public class AccountData {
 
     @JsonCreator
     AccountData(
-            @Nullable @JsonProperty(LOGIN_ATTR) String login,
-            @Nullable @JsonProperty(PASSWORD_ATTR) String password,
-            @Nullable @JsonProperty(EMAIL_ATTR) String email) {
+        @Nullable @JsonProperty(LOGIN_ATTR) String login,
+        @Nullable @JsonProperty(PASSWORD_ATTR) String password,
+        @Nullable @JsonProperty(EMAIL_ATTR) String email) {
 
         this.login = login;
         this.password = password;

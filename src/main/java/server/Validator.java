@@ -9,8 +9,8 @@ public final class Validator {
 
     public static final int PASSWORD_MIN_LENGTH = 6;
     public static final String EMAIL_REGEX =
-            "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@" +
-                    "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
+        "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@" +
+            "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
 
     private static Pattern emailPattern = Pattern.compile(EMAIL_REGEX);
 

@@ -19,10 +19,10 @@ public class Account implements Comparable<Account> {
     private final @NotNull AccountService database;
 
     public Account(
-            @NotNull String login,
-            @NotNull String password,
-            @NotNull String email,
-            @NotNull AccountService database) {
+        @NotNull String login,
+        @NotNull String password,
+        @NotNull String email,
+        @NotNull AccountService database) {
         this.id = ID_GENERATOR.getAndIncrement();
         this.login = login;
         this.passwordHash = ENCODER.encode(password);
@@ -96,7 +96,7 @@ public class Account implements Comparable<Account> {
     @Override
     public int compareTo(@NotNull Account other) {
         return this.rating == other.rating ?
-                this.login.compareTo(other.login) :
-                other.rating - this.rating;
+            this.login.compareTo(other.login) :
+            other.rating - this.rating;
     }
 }

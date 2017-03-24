@@ -21,9 +21,9 @@ public class AccountService {
     }
 
     public @NotNull Account createAccount(
-            @NotNull String login,
-            @NotNull String password,
-            @NotNull String email) {
+        @NotNull String login,
+        @NotNull String password,
+        @NotNull String email) {
         final Account account = new Account(login, password, email, this);
         accounts.put(login, account);
         return account;
