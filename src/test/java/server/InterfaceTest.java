@@ -1,6 +1,5 @@
 package server;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
@@ -20,8 +19,7 @@ import java.util.Random;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
 @SuppressWarnings("OverlyBroadThrowsClause")
@@ -71,6 +69,13 @@ public class InterfaceTest {
         Assert.assertEquals(true, account.passwordMatches(password));
         Assert.assertEquals(account.getEmail(), email);
         Assert.assertEquals(account.getRating(), rating);
+    }
+
+    ///////////////////////////////////
+
+    @After
+    public void clear() {
+        accountService.clear();
     }
 
     ///////////////////////////////////
@@ -181,7 +186,10 @@ public class InterfaceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
-            .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
+            .andExpect(jsonPath(AccountData.RATING_ATTR).value(0))
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, data.getLogin()));
+
+        assertAccountFields(accountService.find(data.getLogin()), data.getLogin(), data.getPassword(), data.getEmail(), 0);
     }
 
     ///////////////////////////////////
@@ -271,7 +279,8 @@ public class InterfaceTest {
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
-            .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, data.getLogin()));
     }
 
     ///////////////////////////////////
@@ -419,38 +428,48 @@ public class InterfaceTest {
     }
 
     ///////////////////////////////////
-    //Get current user tests
+    //Logout tests
+
+    @Test
+    public void testLogoutSuccess() throws Exception {
+
+        mvc
+            .perform(post("/logout/")
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin()))
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, ( Object ) null));
+    }
+
+    ///////////////////////////////////
+    //Get account info tests
 
     @Test
     public void testWhoAmINotLoggedIn() throws Exception {
 
         mvc
             .perform(get("/who-am-i/"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_IN.toString()));
     }
 
     @Test
     public void testWhoAmINotFound() throws Exception {
 
-        final String login = "a";
         mvc
-            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, login))
-            .andExpect(status().isNotFound());
+            .perform(get("/who-am-i/")
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin()))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }
 
     @Test
     public void testWhoAmISuccess() throws Exception {
 
-        final String login = "a";
-        accountService.createAccount(login, "b", "c");
+        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
         mvc
-            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, login))
+            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("login").value(login));
-    }
-
-    @After
-    public void clear() {
-        accountService.clear();
+            .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(account.getLogin()))
+            .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(account.getEmail()))
+            .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
     }
 }
