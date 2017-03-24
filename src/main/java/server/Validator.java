@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 @Service
 public final class Validator {
 
-    private static final int PASSWORD_MIN_LENGTH = 6;
-    private static final String EMAIL_REGEX =
+    public static final int PASSWORD_MIN_LENGTH = 6;
+    public static final String EMAIL_REGEX =
             "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@" +
                     "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
 

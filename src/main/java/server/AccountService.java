@@ -20,26 +20,13 @@ public class AccountService {
         accounts = new HashMap<>();
     }
 
-    public @NotNull Account addAccount(
+    public @NotNull Account createAccount(
             @NotNull String login,
             @NotNull String password,
             @NotNull String email) {
         final Account account = new Account(login, password, email, this);
         accounts.put(login, account);
         return account;
-    }
-
-    public @Nullable Account find(int id) {
-
-        for (Account account : accounts.values()) {
-
-            if (account.getId() == id) {
-
-                return account;
-            }
-        }
-
-        return null;
     }
 
     public @Nullable Account find(String login) {
@@ -68,5 +55,9 @@ public class AccountService {
             accounts.remove(oldLogin);
             accounts.put(account.getLogin(), account);
         }
+    }
+
+    public void clear() {
+        accounts.clear();
     }
 }

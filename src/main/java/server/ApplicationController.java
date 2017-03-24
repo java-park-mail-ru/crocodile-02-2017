@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
         "http://localhost", "http://127.0.0.1"})
 public class ApplicationController {
 
-    public static final String ID_ATTR = "userId";
+    public static final String SESSION_ATTR = "username";
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountService accountService;
@@ -30,9 +30,9 @@ public class ApplicationController {
     @PostMapping(path = "/register/", consumes = "application/json", produces = "application/json")
     public ResponseEntity register(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(ID_ATTR) != null) {
+        if (session.getAttribute(SESSION_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(ID_ATTR));
+            LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(SESSION_ATTR));
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -70,18 +70,18 @@ public class ApplicationController {
                     .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
-        final Account account = accountService.addAccount(body.getLogin(), body.getPassword(), body.getEmail());
+        final Account account = accountService.createAccount(body.getLogin(), body.getPassword(), body.getEmail());
         LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
-        session.setAttribute(ID_ATTR, account.getId());
+        session.setAttribute(SESSION_ATTR, account.getLogin());
         return ResponseEntity.ok(new AccountData(account));
     }
 
     @PostMapping(path = "/login/", consumes = "application/json")
     public ResponseEntity login(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(ID_ATTR) != null) {
+        if (session.getAttribute(SESSION_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(ID_ATTR));
+            LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(SESSION_ATTR));
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -99,8 +99,8 @@ public class ApplicationController {
 
         if ((account != null) && (account.passwordMatches(body.getPassword()))) {
 
-            LOGGER.info("User #{} logged in.", account.getId());
-            session.setAttribute(ID_ATTR, account.getId());
+            LOGGER.info("User #{} logged in.", account.getLogin());
+            session.setAttribute(SESSION_ATTR, account.getLogin());
             return ResponseEntity.ok("");
         }
 
@@ -113,7 +113,7 @@ public class ApplicationController {
     @PostMapping(path = "/change/", consumes = "application/json", produces = "application/json")
     public ResponseEntity changeUser(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(ID_ATTR) == null) {
+        if (session.getAttribute(SESSION_ATTR) == null) {
 
             LOGGER.debug("Unlogged user tried to change credentials.");
             return ResponseEntity
@@ -121,12 +121,12 @@ public class ApplicationController {
                     .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final int id = ( Integer ) session.getAttribute(ID_ATTR);
-        final Account account = accountService.find(id);
+        final String username = ( String ) session.getAttribute(SESSION_ATTR);
+        final Account account = accountService.find(username);
 
         if (account == null) {
 
-            LOGGER.error("Account #{} is no longer valid.", id);
+            LOGGER.error("Account #{} is no longer valid.", username);
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
@@ -157,16 +157,16 @@ public class ApplicationController {
         }
 
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
-        LOGGER.info("User #{}-> {}, {} was changed.", account.getId(), account.getLogin(), account.getEmail());
+        LOGGER.info("User #{} was changed to {}, {}.", account.getId(), account.getLogin(), account.getEmail());
         return ResponseEntity.ok(new AccountData(account));
     }
 
     @PostMapping(path = "/logout/")
     public ResponseEntity logout(HttpSession session) {
 
-        if (session.getAttribute(ID_ATTR) != null) {
+        if (session.getAttribute(SESSION_ATTR) != null) {
 
-            LOGGER.info("User #{} logged out.", session.getAttribute(ID_ATTR));
+            LOGGER.info("User #{} logged out.", session.getAttribute(SESSION_ATTR));
         }
 
         session.invalidate();
@@ -176,7 +176,7 @@ public class ApplicationController {
     @GetMapping(path = "/who-am-i/", produces = "application/json")
     public ResponseEntity getInfo(HttpSession session) {
 
-        if (session.getAttribute(ID_ATTR) == null) {
+        if (session.getAttribute(SESSION_ATTR) == null) {
 
             LOGGER.debug("Unlogged user tried to get his credentials.");
             return ResponseEntity
@@ -184,16 +184,16 @@ public class ApplicationController {
                     .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final int id = ( Integer ) session.getAttribute(ID_ATTR);
-        final Account account = accountService.find(id);
+        final String username = ( String ) session.getAttribute(SESSION_ATTR);
+        final Account account = accountService.find(username);
 
         if (account != null) {
 
-            LOGGER.info("Credentials were sent to user #{}.", account.getId());
+            LOGGER.info("Credentials were sent to user #{}.", account.getLogin());
             return ResponseEntity.ok(new AccountData(account));
         }
 
-        LOGGER.error("Account #{} is no longer valid.", id);
+        LOGGER.error("Account #{} is no longer valid.", username);
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
