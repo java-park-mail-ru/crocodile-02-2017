@@ -69,5 +69,4 @@ public class AccountService {
             accounts.put(account.getLogin(), account);
         }
     }
-
 }

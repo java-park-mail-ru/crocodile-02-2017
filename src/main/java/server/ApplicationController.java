@@ -15,62 +15,16 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = {
         "http://vstaem.herokuapp.com", "https://vstaem.herokuapp.com", "http://vstaem-dev.herokuapp.com", "https://vstaem-dev.herokuapp.com",
         "http://localhost", "http://127.0.0.1"})
-public class AccountController {
+public class ApplicationController {
 
-    private static final String ID_ATTR = "userId";
-    private static final Logger LOGGER = LoggerFactory.getLogger(AccountController.class);
+    public static final String ID_ATTR = "userId";
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountService accountService;
-    private final ValidatorService validatorService;
 
     @Autowired
-    public AccountController(AccountService accountService, ValidatorService validatorService) {
+    public ApplicationController(AccountService accountService) {
         this.accountService = accountService;
-        this.validatorService = validatorService;
-    }
-
-    private enum ErrorCode {
-
-        INSUFFICIENT("insufficient"),
-        LOG_OUT("log_out"),
-        EXISTS("exists"),
-        FORBIDDEN("forbidden"),
-        LOG_IN("log_in"),
-        NOT_FOUND("not_found"),
-        INVALID_FIELD("invalid_field");
-
-        private String text;
-
-        ErrorCode(final String text) {
-
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    private static class ErrorBody {
-
-        ErrorBody(ErrorCode code, String message) {
-
-            this.code = code.toString();
-            this.message = message;
-        }
-
-        public String getCode() {
-            return code;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        private final String code;
-        private final String message;
     }
 
     @PostMapping(path = "/register/", consumes = "application/json", produces = "application/json")
@@ -81,15 +35,15 @@ public class AccountController {
             LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(ID_ATTR));
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
+                    .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
         }
 
-        if (!validatorService.hasRegistrationFields(body)) {
+        if (!Validator.checkRegistrationFields(body)) {
 
             LOGGER.debug("Not all fields were provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
+                    .body(new ErrorData(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
         if (accountService.has(body.getLogin())) {
@@ -97,23 +51,23 @@ public class AccountController {
             LOGGER.debug("User with login {} is already registered.", body.getLogin());
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.EXISTS, "Login is already taken."));
+                    .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
         }
 
-        if (!validatorService.passwordValid(body)) {
+        if (!Validator.checkPassword(body)) {
 
             LOGGER.debug("Invalid password was provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
+                    .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
         }
 
-        if (!validatorService.emailValid(body)) {
+        if (!Validator.checkEmail(body)) {
 
             LOGGER.debug("Invalid email was provided for registration.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
+                    .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
         final Account account = accountService.addAccount(body.getLogin(), body.getPassword(), body.getEmail());
@@ -130,15 +84,15 @@ public class AccountController {
             LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(ID_ATTR));
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
+                    .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
         }
 
-        if (!validatorService.hasLoggingInFields(body)) {
+        if (!Validator.checkLoggingInFields(body)) {
 
             LOGGER.debug("Not all fields were provided for logging in.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
+                    .body(new ErrorData(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
         final Account account = accountService.find(body.getLogin());
@@ -153,7 +107,7 @@ public class AccountController {
         LOGGER.debug("Invalid credentials {}, {} for logging in.", body.getLogin(), body.getPassword());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(new ErrorBody(ErrorCode.FORBIDDEN, "Login or password doesn't match."));
+                .body(new ErrorData(ErrorCode.FORBIDDEN, "Login or password doesn't match."));
     }
 
     @PostMapping(path = "/change/", consumes = "application/json", produces = "application/json")
@@ -164,7 +118,7 @@ public class AccountController {
             LOGGER.debug("Unlogged user tried to change credentials.");
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
+                    .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
         final int id = ( Integer ) session.getAttribute(ID_ATTR);
@@ -175,7 +129,7 @@ public class AccountController {
             LOGGER.error("Account #{} is no longer valid.", id);
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorBody(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
+                    .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
         }
 
         if (!body.getLogin().equals(account.getLogin()) && accountService.has(body.getLogin())) {
@@ -183,23 +137,23 @@ public class AccountController {
             LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.EXISTS, "Login is already taken."));
+                    .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
         }
 
-        if (body.hasPassword() && !validatorService.passwordValid(body)) {
+        if (body.hasPassword() && !Validator.checkPassword(body)) {
 
             LOGGER.debug("Invalid password was provided for changing.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
+                    .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid password was provided."));
         }
 
-        if (body.hasEmail() && !validatorService.emailValid(body)) {
+        if (body.hasEmail() && !Validator.checkEmail(body)) {
 
             LOGGER.debug("Invalid email was provided for changing.");
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorBody(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
+                    .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
         account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
@@ -227,7 +181,7 @@ public class AccountController {
             LOGGER.debug("Unlogged user tried to get his credentials.");
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
-                    .body(new ErrorBody(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
+                    .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
         final int id = ( Integer ) session.getAttribute(ID_ATTR);
@@ -242,7 +196,7 @@ public class AccountController {
         LOGGER.error("Account #{} is no longer valid.", id);
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorBody(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
+                .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
     }
 
     @GetMapping(path = "/best/", produces = "application/json")

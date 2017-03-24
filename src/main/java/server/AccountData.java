@@ -1,6 +1,7 @@
 package server;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,7 +45,8 @@ public class AccountData {
         return (login != null);
     }
 
-    String getPassword() {
+    @JsonIgnore
+    public String getPassword() {
         return password;
     }
 
