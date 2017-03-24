@@ -77,7 +77,7 @@ public class Account implements Comparable<Account> {
             setLogin(login);
         }
         if (password != null) {
-            this.passwordHash = password;
+            this.passwordHash = ENCODER.encode(password);
         }
         if (email != null) {
             this.email = email;

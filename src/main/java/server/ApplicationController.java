@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
     "http://localhost", "http://127.0.0.1"})
 public class ApplicationController {
 
-    public static final String SESSION_ATTR = "username";
+    public static final String SESSION_ATTR = "login";
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountService accountService;
@@ -111,7 +111,7 @@ public class ApplicationController {
     }
 
     @PostMapping(path = "/change/", consumes = "application/json", produces = "application/json")
-    public ResponseEntity changeUser(@RequestBody AccountData body, HttpSession session) {
+    public ResponseEntity changeAccount(@RequestBody AccountData body, HttpSession session) {
 
         if (session.getAttribute(SESSION_ATTR) == null) {
 
@@ -121,18 +121,18 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String username = ( String ) session.getAttribute(SESSION_ATTR);
-        final Account account = accountService.find(username);
+        final String login = ( String ) session.getAttribute(SESSION_ATTR);
+        final Account account = accountService.find(login);
 
         if (account == null) {
 
-            LOGGER.error("Account #{} is no longer valid.", username);
+            LOGGER.error("Account #{} is no longer valid.", login);
             return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
         }
 
-        if (!body.getLogin().equals(account.getLogin()) && accountService.has(body.getLogin())) {
+        if (body.hasLogin() && !body.getLogin().equals(account.getLogin()) && accountService.has(body.getLogin())) {
 
             LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
             return ResponseEntity
@@ -184,8 +184,8 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String username = ( String ) session.getAttribute(SESSION_ATTR);
-        final Account account = accountService.find(username);
+        final String login = ( String ) session.getAttribute(SESSION_ATTR);
+        final Account account = accountService.find(login);
 
         if (account != null) {
 
@@ -193,7 +193,7 @@ public class ApplicationController {
             return ResponseEntity.ok(new AccountData(account));
         }
 
-        LOGGER.error("Account #{} is no longer valid.", username);
+        LOGGER.error("Account #{} is no longer valid.", login);
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
