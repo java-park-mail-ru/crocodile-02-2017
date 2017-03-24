@@ -70,7 +70,6 @@ public class InterfaceTest {
         final ObjectMapper mapper = new ObjectMapper();
         AccountData data = new AccountData(generateLogin(), generatePassword(true), null);
 
-
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -176,6 +175,71 @@ public class InterfaceTest {
     ///////////////////////////////////
     //Signup tests
 
+    @Test
+    public void testSignupNotAllFields() throws Exception {
+
+        final ObjectMapper mapper = new ObjectMapper();
+        AccountData data = new AccountData(generateLogin(), null, null);
+
+        mvc
+            .perform(post("/login/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
+
+        data = new AccountData(null, generatePassword(true), null);
+
+        mvc
+            .perform(post("/login/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
+    }
+
+    @Test
+    public void testSignupLoggedIn() throws Exception {
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
+
+        mvc
+            .perform(post("/login/")
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
+    }
+
+    @Test
+    public void testSignupInvalidCredentials() throws Exception {
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
+
+        mvc
+            .perform(post("/login/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
+    }
+
+    @Test
+    public void testSignupSuccess() throws Exception {
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
+        accountService.createAccount(data.getLogin(), data.getPassword(), data.getEmail());
+
+        mvc
+            .perform(post("/login/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(data)))
+            .andExpect(status().isOk());
+    }
 
     ///////////////////////////////////
     //Get current user tests
