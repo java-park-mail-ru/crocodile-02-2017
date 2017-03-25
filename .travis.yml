@@ -12,6 +12,4 @@ before_script:
     email TEXT NOT NULL,
     rating INTEGER DEFAULT 0 NOT NULL );' -d javaserverdb -U postgres
 env:
-  - JDBC_DATABASE_URL=jdbc:postgresql://localhost:5432/javaserverdb
-  - JDBC_DATABASE_USERNAME=postgres
-  - JDBC_DATABASE_PASSWORD=
+  - JDBC_DATABASE_URL=jdbc:postgresql://localhost:5432/javaserverdb JDBC_DATABASE_USERNAME=postgres JDBC_DATABASE_PASSWORD=
