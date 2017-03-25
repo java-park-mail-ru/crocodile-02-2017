@@ -1,14 +1,13 @@
 package server;
 
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings({"unused", "ComparableImplementedButEqualsNotOverridden"})
 public class Account implements Comparable<Account> {
 
-    private static final AtomicInteger ID_GENERATOR = new AtomicInteger(0);
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
     private final int id;
@@ -16,30 +15,27 @@ public class Account implements Comparable<Account> {
     private @NotNull String passwordHash;
     private @NotNull String email;
     private int rating;
-    private final @NotNull AccountService database;
+
+    @Contract("!null->!null")
+    public static @Nullable String hashPassword(@Nullable String password) {
+        return (password != null) ? ENCODER.encode(password) : null;
+    }
 
     public Account(
+        int id,
         @NotNull String login,
-        @NotNull String password,
+        @NotNull String passwordHash,
         @NotNull String email,
-        @NotNull AccountService database) {
-        this.id = ID_GENERATOR.getAndIncrement();
+        int rating) {
+        this.id = id;
         this.login = login;
-        this.passwordHash = ENCODER.encode(password);
+        this.passwordHash = passwordHash;
         this.email = email;
-        this.database = database;
-        this.rating = 0;
+        this.rating = rating;
     }
 
     public int getId() {
         return id;
-    }
-
-    public void setLogin(@NotNull String login) {
-
-        final String oldLogin = this.login;
-        this.login = login;
-        database.updateKey(oldLogin, this);
     }
 
     public @NotNull String getLogin() {
@@ -71,16 +67,24 @@ public class Account implements Comparable<Account> {
     }
 
     //changes properties if they are not null
-    public void setProperties(String login, String password, String email) {
+    public void setProperties(
+        @Nullable String login,
+        @Nullable String passwordHash,
+        @Nullable String email,
+        @Nullable Integer rating) {
 
         if (login != null) {
-            setLogin(login);
+            this.login = login;
         }
-        if (password != null) {
-            this.passwordHash = ENCODER.encode(password);
+        if (passwordHash != null) {
+            this.passwordHash = passwordHash;
         }
         if (email != null) {
             this.email = email;
+        }
+
+        if (rating != null) {
+            this.rating = rating;
         }
     }
 

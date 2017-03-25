@@ -1,6 +1,8 @@
 package server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import database.AccountService;
+import database.AccountServiceDatabase;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
@@ -14,9 +16,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.ArrayList;
 import java.util.Random;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -30,7 +35,7 @@ public class InterfaceTest {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
-    private AccountService accountService;
+    private AccountServiceDatabase accountService;
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
@@ -64,7 +69,7 @@ public class InterfaceTest {
 
     public void assertAccountFields(@Nullable Account account, String login, String password, String email, int rating) {
 
-        assert account != null;
+        Assert.assertNotNull(account);
         Assert.assertEquals(account.getLogin(), login);
         Assert.assertEquals(true, account.passwordMatches(password));
         Assert.assertEquals(account.getEmail(), email);
@@ -75,7 +80,7 @@ public class InterfaceTest {
 
     @After
     public void clear() {
-        accountService.clear();
+        //accountService.clear();
     }
 
     ///////////////////////////////////
@@ -189,7 +194,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0))
             .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, data.getLogin()));
 
-        assertAccountFields(accountService.find(data.getLogin()), data.getLogin(), data.getPassword(), data.getEmail(), 0);
+        assertAccountFields(accountService.findAccount(data.getLogin()), data.getLogin(), data.getPassword(), data.getEmail(), 0);
     }
 
     ///////////////////////////////////
@@ -319,8 +324,12 @@ public class InterfaceTest {
     public void testChangeAccountLoginExists() throws Exception {
 
         final ObjectMapper mapper = new ObjectMapper();
-        final String login = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true)).getLogin();
-        final String takenLogin = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true)).getLogin();
+        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(account);
+        final String login = account.getLogin();
+        final Account takenAccount = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(takenAccount);
+        final String takenLogin = takenAccount.getLogin();
         final AccountData data = new AccountData(takenLogin, null, null);
 
         mvc
@@ -337,8 +346,9 @@ public class InterfaceTest {
 
         final ObjectMapper mapper = new ObjectMapper();
         final AccountData data = new AccountData(null, generatePassword(false), null);
-        final String login = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true)).getLogin();
-
+        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(account);
+        final String login = account.getLogin();
         mvc
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_ATTR, login)
@@ -353,7 +363,9 @@ public class InterfaceTest {
 
         final ObjectMapper mapper = new ObjectMapper();
         final AccountData data = new AccountData(null, null, generateEmail(false));
-        final String login = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true)).getLogin();
+        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(account);
+        final String login = account.getLogin();
 
         mvc
             .perform(post("/change/")
@@ -371,6 +383,7 @@ public class InterfaceTest {
         final String password = generatePassword(true);
         final Account account = accountService.createAccount(generateLogin(), password, generateEmail(true));
         final AccountData data = new AccountData(null, null, null);
+        Assert.assertNotNull(account);
 
         mvc
             .perform(post("/change/")
@@ -382,7 +395,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(account.getEmail()))
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
 
-        assertAccountFields(accountService.find(account.getLogin()), account.getLogin(), password, account.getEmail(), 0);
+        assertAccountFields(accountService.findAccount(account.getLogin()), account.getLogin(), password, account.getEmail(), 0);
     }
 
     @Test
@@ -392,6 +405,7 @@ public class InterfaceTest {
         final String password = generatePassword(true);
         final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
         final AccountData data = new AccountData(generateLogin(), password, generateEmail(true));
+        Assert.assertNotNull(account);
 
         mvc
             .perform(post("/change/")
@@ -403,7 +417,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
 
-        assertAccountFields(accountService.find(account.getLogin()), account.getLogin(), password, account.getEmail(), 0);
+        assertAccountFields(accountService.findAccount(data.getLogin()), data.getLogin(), password, data.getEmail(), 0);
     }
 
     @Test
@@ -412,6 +426,7 @@ public class InterfaceTest {
         final ObjectMapper mapper = new ObjectMapper();
         final String password = generatePassword(true);
         final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(account);
         final AccountData data = new AccountData(account.getLogin(), password, generateEmail(true));
 
         mvc
@@ -424,7 +439,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
 
-        assertAccountFields(accountService.find(account.getLogin()), account.getLogin(), password, data.getEmail(), 0);
+        assertAccountFields(accountService.findAccount(account.getLogin()), account.getLogin(), password, data.getEmail(), 0);
     }
 
     ///////////////////////////////////
@@ -465,6 +480,7 @@ public class InterfaceTest {
     public void testWhoAmISuccess() throws Exception {
 
         final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        Assert.assertNotNull(account);
         mvc
             .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin()))
             .andExpect(status().isOk())
@@ -472,4 +488,49 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(account.getEmail()))
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0));
     }
+
+    ///////////////////////////////////
+    //Get best tests
+
+    @Test
+    public void testGetBestEmpty() throws Exception {
+
+        accountService.clear();
+        mvc
+            .perform(get("/best/"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    public void testGetBestSuccess() throws Exception {
+
+        accountService.clear();
+        final ArrayList<Account> createdAccounts = new ArrayList<>();
+
+        for (int i = 0; i < AccountService.BEST_COUNT * 2; ++i) {
+            Account account = accountService.createAccount(generateLogin(), generateEmail(true), generatePassword(true));
+            Assert.assertNotNull(account);
+            account = accountService.updateAccount(account.getLogin(), null, null, null, i);
+            Assert.assertNotNull(account);
+            createdAccounts.add(account);
+        }
+
+        final ResultActions result = mvc
+            .perform(get("/best/"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(AccountService.BEST_COUNT)));
+
+        for (int i = 0; i < AccountService.BEST_COUNT; ++i) {
+
+            final String path = String.format("$[%1$d].", i);
+            final Account account = createdAccounts.get(createdAccounts.size() - i - 1);
+            result
+                .andExpect(jsonPath(path + AccountData.LOGIN_ATTR).value(account.getLogin()))
+                .andExpect(jsonPath(path + AccountData.EMAIL_ATTR).value(account.getEmail()))
+                .andExpect(jsonPath(path + AccountData.RATING_ATTR).value(account.getRating()));
+        }
+    }
+
+
 }

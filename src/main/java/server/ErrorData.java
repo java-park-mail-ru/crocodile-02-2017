@@ -12,7 +12,7 @@ public class ErrorData {
     private final @NotNull String code;
     private final @NotNull String message;
 
-    ErrorData(@NotNull ErrorCode code, @NotNull String message) {
+    public ErrorData(@NotNull ErrorCode code, @NotNull String message) {
 
         this.code = code.toString();
         this.message = message;

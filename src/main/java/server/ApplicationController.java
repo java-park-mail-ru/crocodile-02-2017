@@ -1,5 +1,6 @@
 package server;
 
+import database.AccountServiceDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +21,10 @@ public class ApplicationController {
     public static final String SESSION_ATTR = "login";
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
-    private final AccountService accountService;
+    private final AccountServiceDatabase accountService;
 
     @Autowired
-    public ApplicationController(AccountService accountService) {
+    public ApplicationController(AccountServiceDatabase accountService) {
         this.accountService = accountService;
     }
 
@@ -46,7 +47,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
-        if (accountService.has(body.getLogin())) {
+        if (accountService.hasAccount(body.getLogin())) {
 
             LOGGER.debug("User with login {} is already registered.", body.getLogin());
             return ResponseEntity
@@ -71,6 +72,7 @@ public class ApplicationController {
         }
 
         final Account account = accountService.createAccount(body.getLogin(), body.getPassword(), body.getEmail());
+        assert account != null;
         LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
         session.setAttribute(SESSION_ATTR, account.getLogin());
         return ResponseEntity.ok(new AccountData(account));
@@ -95,7 +97,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
-        final Account account = accountService.find(body.getLogin());
+        final Account account = accountService.findAccount(body.getLogin());
 
         if ((account != null) && (account.passwordMatches(body.getPassword()))) {
 
@@ -122,7 +124,7 @@ public class ApplicationController {
         }
 
         final String login = ( String ) session.getAttribute(SESSION_ATTR);
-        final Account account = accountService.find(login);
+        Account account = accountService.findAccount(login);
 
         if (account == null) {
 
@@ -132,7 +134,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
         }
 
-        if (body.hasLogin() && !body.getLogin().equals(account.getLogin()) && accountService.has(body.getLogin())) {
+        if (body.hasLogin() && !body.getLogin().equals(account.getLogin()) && accountService.hasAccount(body.getLogin())) {
 
             LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
             return ResponseEntity
@@ -156,8 +158,14 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
-        account.setProperties(body.getLogin(), body.getPassword(), body.getEmail());
-        LOGGER.info("User #{} was changed to {}, {}.", account.getId(), account.getLogin(), account.getEmail());
+        account = accountService.updateAccount(
+            account.getLogin(),
+            body.getLogin(),
+            Account.hashPassword(body.getPassword()),
+            body.getEmail(),
+            null);
+        assert account != null;
+        LOGGER.info("User #{} was changed -> {}, {}.", account.getId(), account.getLogin(), account.getEmail());
         return ResponseEntity.ok(new AccountData(account));
     }
 
@@ -185,7 +193,7 @@ public class ApplicationController {
         }
 
         final String login = ( String ) session.getAttribute(SESSION_ATTR);
-        final Account account = accountService.find(login);
+        final Account account = accountService.findAccount(login);
 
         if (account != null) {
 

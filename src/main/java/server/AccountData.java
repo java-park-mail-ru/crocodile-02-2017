@@ -21,7 +21,7 @@ public class AccountData {
     private int rating;
 
     @JsonCreator
-    AccountData(
+    public AccountData(
         @Nullable @JsonProperty(LOGIN_ATTR) String login,
         @Nullable @JsonProperty(PASSWORD_ATTR) String password,
         @Nullable @JsonProperty(EMAIL_ATTR) String email) {
@@ -32,7 +32,8 @@ public class AccountData {
         this.rating = 0;
     }
 
-    AccountData(@NotNull Account account) {
+    public AccountData(@NotNull Account account) {
+
 
         this.login = account.getLogin();
         this.password = null;
