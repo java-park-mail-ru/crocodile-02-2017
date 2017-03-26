@@ -80,7 +80,7 @@ public class InterfaceTest {
 
     @After
     public void clear() {
-        //accountService.clear();
+        accountService.clear();
     }
 
     ///////////////////////////////////
