@@ -11,8 +11,6 @@ import server.Account;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 @Service
 public class AccountServiceDatabase implements AccountService {
@@ -23,6 +21,8 @@ public class AccountServiceDatabase implements AccountService {
     private static final String RATING_PARAM = "prating";
     private static final String OLD_LOGIN_PARAM = "poldlogin";
     private static final String LIMIT_PARAM = "plimit";
+
+    private static final AccountRowMapper ACCOUNT_MAPPER = new AccountRowMapper();
 
     private NamedParameterJdbcTemplate database;
 
@@ -65,7 +65,7 @@ public class AccountServiceDatabase implements AccountService {
                 " RETURNING *",
             LOGIN_PARAM, PASSWORD_HASH_PARAM, EMAIL_PARAM);
 
-        final List<Account> result = database.query(insertAccountSql, source, new AccountRowMapper());
+        final List<Account> result = database.query(insertAccountSql, source, ACCOUNT_MAPPER);
         return (result.size() == 1) ? result.get(0) : null;
     }
 
@@ -81,7 +81,7 @@ public class AccountServiceDatabase implements AccountService {
                 " WHERE login = :%1$s",
             LOGIN_PARAM);
 
-        final List<Account> result = database.query(selectAccountSql, source, new AccountRowMapper());
+        final List<Account> result = database.query(selectAccountSql, source, ACCOUNT_MAPPER);
         return (result.size() == 1) ? result.get(0) : null;
     }
 
@@ -89,7 +89,7 @@ public class AccountServiceDatabase implements AccountService {
     public @Nullable Account updateAccount(
         @NotNull String oldLogin,
         @Nullable String login,
-        @Nullable String passwordHash,
+        @Nullable String password,
         @Nullable String email,
         @Nullable Integer rating) {
 
@@ -97,7 +97,7 @@ public class AccountServiceDatabase implements AccountService {
         final MapSqlParameterSource source = new MapSqlParameterSource();
 
         source.addValue(LOGIN_PARAM, login);
-        source.addValue(PASSWORD_HASH_PARAM, passwordHash);
+        source.addValue(PASSWORD_HASH_PARAM, Account.hashPassword(password));
         source.addValue(EMAIL_PARAM, email);
         source.addValue(RATING_PARAM, rating);
         source.addValue(OLD_LOGIN_PARAM, oldLogin);
@@ -113,7 +113,7 @@ public class AccountServiceDatabase implements AccountService {
                 " RETURNING *",
             LOGIN_PARAM, PASSWORD_HASH_PARAM, EMAIL_PARAM, RATING_PARAM, OLD_LOGIN_PARAM);
 
-        final List<Account> result = database.query(updateAccountSql, source, new AccountRowMapper());
+        final List<Account> result = database.query(updateAccountSql, source, ACCOUNT_MAPPER);
         return (result.size() == 1) ? result.get(0) : null;
     }
 
@@ -123,7 +123,7 @@ public class AccountServiceDatabase implements AccountService {
     }
 
     @Override
-    public SortedSet<Account> getBest() {
+    public List<Account> getBest() {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
 
@@ -135,22 +135,6 @@ public class AccountServiceDatabase implements AccountService {
                 " LIMIT :%1$s",
             LIMIT_PARAM);
 
-        final List<Account> result = database.query(selectAccountSql, source, new AccountRowMapper());
-        final TreeSet<Account> bestPlayers = new TreeSet<>(result);
-        while (bestPlayers.size() > BEST_COUNT) {
-
-            bestPlayers.remove(bestPlayers.last());
-        }
-
-        return bestPlayers;
-    }
-
-
-    @Override
-    public void clear() {
-
-        final MapSqlParameterSource source = new MapSqlParameterSource();
-        final String clearAccountSql = " TRUNCATE account";
-        database.update(clearAccountSql, source);
+        return database.query(selectAccountSql, source, ACCOUNT_MAPPER);
     }
 }

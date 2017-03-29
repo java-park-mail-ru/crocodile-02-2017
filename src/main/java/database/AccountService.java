@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import server.Account;
 
-import java.util.SortedSet;
+import java.util.List;
 
 public interface AccountService {
 
@@ -19,13 +19,11 @@ public interface AccountService {
 
     @Nullable Account updateAccount(@NotNull String oldLogin,
                                     @Nullable String login,
-                                    @Nullable String passwordHash,
+                                    @Nullable String password,
                                     @Nullable String email,
                                     @Nullable Integer rating);
 
     boolean hasAccount(String login);
 
-    SortedSet<Account> getBest();
-
-    void clear();
+    List<Account> getBest();
 }

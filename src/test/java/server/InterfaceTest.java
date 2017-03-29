@@ -5,7 +5,6 @@ import database.AccountService;
 import database.AccountServiceDatabase;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -27,41 +27,45 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
-@SuppressWarnings("OverlyBroadThrowsClause")
+@SuppressWarnings({"OverlyBroadThrowsClause", "SpringJavaAutowiredMembersInspection"})
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 public class InterfaceTest {
 
-    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
     private AccountServiceDatabase accountService;
 
-    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     @Autowired
     private MockMvc mvc;
 
-    private String generateLogin() {
+    @Autowired
+    private ObjectMapper mapper;
 
-        final int minLength = 5;
-        final int length = new Random().nextInt(10) + minLength;
-        return RandomStringUtils.randomAlphanumeric(length) + String.valueOf(System.currentTimeMillis());
+    private String generateLogin(@Nullable String mainName) {
+
+        return (mainName != null) ?
+            mainName + String.valueOf(System.currentTimeMillis()) :
+            RandomStringUtils.randomAlphabetic(5) + String.valueOf(System.currentTimeMillis());
     }
 
     private String generatePassword(boolean isValid) {
 
-        final int minLength = Validator.PASSWORD_MIN_LENGTH;
-        final int length = new Random().nextInt(10) + minLength;
+        final String password = String.format(
+            "%-" + Validator.PASSWORD_MIN_LENGTH + 's', "correct")
+            .replace(' ', '*');
+
         return (isValid) ?
-            RandomStringUtils.randomAlphanumeric(length) :
-            RandomStringUtils.randomAlphanumeric(minLength - 1);
+            password :
+            "incorrect".substring(0, Validator.PASSWORD_MIN_LENGTH - 1);
     }
 
     private String generateEmail(boolean isValid) {
 
-        final int minLength = 4;
-        final int length = new Random().nextInt(6) + minLength;
-        final String email = RandomStringUtils.randomAlphanumeric(length) + '@' + RandomStringUtils.randomAlphanumeric(length).toLowerCase() + ".ru";
+        final int minLength = 5;
+        final int length = new Random().nextInt(5) + minLength;
+        final String email = RandomStringUtils.randomAlphanumeric(length) +
+            '@' + RandomStringUtils.randomAlphanumeric(6).toLowerCase() + ".ru";
         return (isValid) ?
             email :
             email.replace('@', '0');
@@ -77,35 +81,34 @@ public class InterfaceTest {
     }
 
     ///////////////////////////////////
-
-    @After
-    public void clear() {
-        accountService.clear();
-    }
-
-    ///////////////////////////////////
     //Registration tests
 
+    @Transactional
     @Test
     public void testRegisterLoggedIn() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
+        final AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(true),
+            generateEmail(true));
 
         mvc
             .perform(post("/register/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin(null))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
     }
 
+    @Transactional
     @Test
     public void testRegisterNotAllFields() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        AccountData data = new AccountData(generateLogin(), generatePassword(true), null);
+        AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(true),
+            null);
 
         mvc
             .perform(post("/register/")
@@ -114,7 +117,10 @@ public class InterfaceTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
-        data = new AccountData(generateLogin(), null, generateEmail(true));
+        data = new AccountData(
+            generateLogin(null),
+            null,
+            generateEmail(true));
 
         mvc
             .perform(post("/register/")
@@ -123,7 +129,10 @@ public class InterfaceTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
-        data = new AccountData(null, generatePassword(true), generateEmail(true));
+        data = new AccountData(
+            null,
+            generatePassword(true),
+            generateEmail(true));
 
         mvc
             .perform(post("/register/")
@@ -133,11 +142,14 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
     }
 
+    @Transactional
     @Test
     public void testRegisterInvalidPassword() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(false), generateEmail(true));
+        final AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(false),
+            generateEmail(true));
 
         mvc
             .perform(post("/register/")
@@ -147,11 +159,14 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
+    @Transactional
     @Test
     public void testRegisterInvalidEmail() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(false));
+        final AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(true),
+            generateEmail(false));
 
         mvc
             .perform(post("/register/")
@@ -161,12 +176,15 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
+    @Transactional
     @Test
     public void testRegisterExists() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final String login = generateLogin();
-        final AccountData data = new AccountData(login, generatePassword(true), generateEmail(true));
+        final String login = generateLogin("existingName");
+        final AccountData data = new AccountData(
+            login,
+            generatePassword(true),
+            generateEmail(true));
 
         accountService.createAccount(login, generatePassword(true), generateEmail(true));
 
@@ -178,11 +196,14 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
     }
 
+    @Transactional
     @Test
     public void testRegisterSuccess() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(true), generateEmail(true));
+        final AccountData data = new AccountData(
+            generateLogin("registerName"),
+            generatePassword(true),
+            generateEmail(true));
 
         mvc
             .perform(post("/register/")
@@ -200,26 +221,32 @@ public class InterfaceTest {
     ///////////////////////////////////
     //Signup tests
 
+    @Transactional
     @Test
     public void testSignupLoggedIn() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(true), null);
+        final AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(true),
+            null);
 
         mvc
             .perform(post("/login/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin(null))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
     }
 
+    @Transactional
     @Test
     public void testSignupNotAllFields() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        AccountData data = new AccountData(generateLogin(), null, null);
+        AccountData data = new AccountData(
+            generateLogin(null),
+            null,
+            null);
 
         mvc
             .perform(post("/login/")
@@ -228,7 +255,10 @@ public class InterfaceTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
-        data = new AccountData(null, generatePassword(true), null);
+        data = new AccountData(
+            null,
+            generatePassword(true),
+            null);
 
         mvc
             .perform(post("/login/")
@@ -238,11 +268,14 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
     }
 
+    @Transactional
     @Test
     public void testSignupInvalidCredentials() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        AccountData data = new AccountData(generateLogin(), generatePassword(true), null);
+        AccountData data = new AccountData(
+            generateLogin(null),
+            generatePassword(true),
+            null);
 
         mvc
             .perform(post("/login/")
@@ -263,7 +296,10 @@ public class InterfaceTest {
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
 
-        data = new AccountData(generateLogin(), password, null);
+        data = new AccountData(
+            generateLogin(null),
+            password,
+            null);
 
         mvc
             .perform(post("/login/")
@@ -273,11 +309,14 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
     }
 
+    @Transactional
     @Test
     public void testSignupSuccess() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(generateLogin(), generatePassword(true), null);
+        final AccountData data = new AccountData(
+            generateLogin("loginName"),
+            generatePassword(true),
+            null);
         accountService.createAccount(data.getLogin(), data.getPassword(), generateEmail(true));
 
         mvc
@@ -291,10 +330,10 @@ public class InterfaceTest {
     ///////////////////////////////////
     //Change user tests
 
+    @Transactional
     @Test
     public void testChangeAccountNotLoggedIn() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final AccountData data = new AccountData(null, null, null);
 
         mvc
@@ -305,31 +344,39 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_IN.toString()));
     }
 
+    @Transactional
     @Test
     public void testChangeAccountNotFound() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final AccountData data = new AccountData(null, null, null);
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin())
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin("noSuchName"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }
 
+    @Transactional
     @Test
     public void testChangeAccountLoginExists() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin("initialName"),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(account);
         final String login = account.getLogin();
-        final Account takenAccount = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+
+        final Account takenAccount = accountService.createAccount(
+            generateLogin("existingName"),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(takenAccount);
         final String takenLogin = takenAccount.getLogin();
+
         final AccountData data = new AccountData(takenLogin, null, null);
 
         mvc
@@ -341,12 +388,18 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
     }
 
+    @Transactional
     @Test
     public void testChangeAccountInvalidPassword() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final AccountData data = new AccountData(null, generatePassword(false), null);
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        final AccountData data = new AccountData(
+            null,
+            generatePassword(false),
+            null);
+        final Account account = accountService.createAccount(
+            generateLogin(null),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(account);
         final String login = account.getLogin();
         mvc
@@ -358,12 +411,15 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
+    @Transactional
     @Test
     public void testChangeAccountInvalidEmail() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final AccountData data = new AccountData(null, null, generateEmail(false));
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin(null),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(account);
         final String login = account.getLogin();
 
@@ -376,12 +432,15 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
 
+    @Transactional
     @Test
     public void testChangeAccountNoChanges() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final String password = generatePassword(true);
-        final Account account = accountService.createAccount(generateLogin(), password, generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin("initialName"),
+            password,
+            generateEmail(true));
         final AccountData data = new AccountData(null, null, null);
         Assert.assertNotNull(account);
 
@@ -398,13 +457,19 @@ public class InterfaceTest {
         assertAccountFields(accountService.findAccount(account.getLogin()), account.getLogin(), password, account.getEmail(), 0);
     }
 
+    @Transactional
     @Test
     public void testChangeAccountSuccess() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final String password = generatePassword(true);
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
-        final AccountData data = new AccountData(generateLogin(), password, generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin("initialName"),
+            generatePassword(true),
+            generateEmail(true));
+        final AccountData data = new AccountData(
+            generateLogin("newName"),
+            password,
+            generateEmail(true));
         Assert.assertNotNull(account);
 
         mvc
@@ -420,12 +485,15 @@ public class InterfaceTest {
         assertAccountFields(accountService.findAccount(data.getLogin()), data.getLogin(), password, data.getEmail(), 0);
     }
 
+    @Transactional
     @Test
     public void testChangeAccountSameLogin() throws Exception {
 
-        final ObjectMapper mapper = new ObjectMapper();
         final String password = generatePassword(true);
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin("initialName"),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(account);
         final AccountData data = new AccountData(account.getLogin(), password, generateEmail(true));
 
@@ -445,18 +513,20 @@ public class InterfaceTest {
     ///////////////////////////////////
     //Logout tests
 
+    @Transactional
     @Test
     public void testLogoutSuccess() throws Exception {
 
         mvc
             .perform(post("/logout/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin()))
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin("sessionName")))
             .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, ( Object ) null));
     }
 
     ///////////////////////////////////
     //Get account info tests
 
+    @Transactional
     @Test
     public void testWhoAmINotLoggedIn() throws Exception {
 
@@ -466,20 +536,25 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_IN.toString()));
     }
 
+    @Transactional
     @Test
     public void testWhoAmINotFound() throws Exception {
 
         mvc
             .perform(get("/who-am-i/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin()))
+                .sessionAttr(ApplicationController.SESSION_ATTR, generateLogin("sessionName")))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }
 
+    @Transactional
     @Test
     public void testWhoAmISuccess() throws Exception {
 
-        final Account account = accountService.createAccount(generateLogin(), generatePassword(true), generateEmail(true));
+        final Account account = accountService.createAccount(
+            generateLogin("yourName"),
+            generatePassword(true),
+            generateEmail(true));
         Assert.assertNotNull(account);
         mvc
             .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin()))
@@ -492,24 +567,27 @@ public class InterfaceTest {
     ///////////////////////////////////
     //Get best tests
 
+    @Transactional
     @Test
     public void testGetBestEmpty() throws Exception {
 
-        accountService.clear();
         mvc
             .perform(get("/best/"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(0)));
     }
 
+    @Transactional
     @Test
     public void testGetBestSuccess() throws Exception {
 
-        accountService.clear();
         final ArrayList<Account> createdAccounts = new ArrayList<>();
 
         for (int i = 0; i < AccountService.BEST_COUNT * 2; ++i) {
-            Account account = accountService.createAccount(generateLogin(), generateEmail(true), generatePassword(true));
+            Account account = accountService.createAccount(
+                generateLogin("best#" + String.valueOf(i)),
+                generateEmail(true),
+                generatePassword(true));
             Assert.assertNotNull(account);
             account = accountService.updateAccount(account.getLogin(), null, null, null, i);
             Assert.assertNotNull(account);
@@ -531,6 +609,4 @@ public class InterfaceTest {
                 .andExpect(jsonPath(path + AccountData.RATING_ATTR).value(account.getRating()));
         }
     }
-
-
 }

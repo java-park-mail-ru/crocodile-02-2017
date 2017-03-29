@@ -1,10 +1,7 @@
 package server;
 
-import org.springframework.stereotype.Service;
-
 import java.util.regex.Pattern;
 
-@Service
 public final class Validator {
 
     public static final int PASSWORD_MIN_LENGTH = 6;

@@ -1,7 +1,6 @@
 package server;
 
 import database.AccountServiceDatabase;
-import database.AccountServiceHashmap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,11 +22,6 @@ public class ApplicationConfiguration {
     public AccountServiceDatabase serviceDatabase(NamedParameterJdbcTemplate database) {
         return new AccountServiceDatabase(database);
 
-    }
-
-    @Bean
-    public AccountServiceHashmap serviceHashmap() {
-        return new AccountServiceHashmap();
     }
 }
 
