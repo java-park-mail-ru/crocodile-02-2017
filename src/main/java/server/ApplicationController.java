@@ -161,7 +161,7 @@ public class ApplicationController {
         account = accountService.updateAccount(
             account.getLogin(),
             body.getLogin(),
-            Account.hashPassword(body.getPassword()),
+            body.getPassword(),
             body.getEmail(),
             null);
         assert account != null;
