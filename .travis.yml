@@ -1,0 +1,15 @@
+language: java
+jdk:
+  - oraclejdk8
+services:
+  - postgresql
+before_script:
+  - psql -c 'create database javaserverdb;' -U postgres
+  - psql -c 'CREATE TABLE account(
+    id SERIAL PRIMARY KEY NOT NULL,
+    login TEXT NOT NULL UNIQUE,
+    passhash TEXT NOT NULL,
+    email TEXT NOT NULL,
+    rating INTEGER DEFAULT 0 NOT NULL );' -d javaserverdb -U postgres
+env:
+  - JDBC_DATABASE_URL=jdbc:postgresql://localhost:5432/javaserverdb JDBC_DATABASE_USERNAME=postgres JDBC_DATABASE_PASSWORD=
