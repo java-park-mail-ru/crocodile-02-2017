@@ -8,7 +8,8 @@ public enum ErrorCode {
     FORBIDDEN("forbidden"),
     LOG_IN("log_in"),
     NOT_FOUND("not_found"),
-    INVALID_FIELD("invalid_field");
+    INVALID_FIELD("invalid_field"),
+    INTERNAL("internal");
 
     private String text;
 

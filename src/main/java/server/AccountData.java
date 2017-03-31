@@ -34,7 +34,6 @@ public class AccountData {
 
     public AccountData(@NotNull Account account) {
 
-
         this.login = account.getLogin();
         this.password = null;
         this.email = account.getEmail();
@@ -51,6 +50,7 @@ public class AccountData {
         return (login != null);
     }
 
+    @JsonProperty(value = PASSWORD_ATTR)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String getPassword() {
         return password;

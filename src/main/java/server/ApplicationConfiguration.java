@@ -21,7 +21,6 @@ public class ApplicationConfiguration {
     @Bean
     public AccountServiceDatabase serviceDatabase(NamedParameterJdbcTemplate database) {
         return new AccountServiceDatabase(database);
-
     }
 }
 

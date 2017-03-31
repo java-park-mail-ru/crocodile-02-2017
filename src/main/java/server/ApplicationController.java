@@ -4,10 +4,13 @@ import database.AccountServiceDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
@@ -26,6 +29,15 @@ public class ApplicationController {
     @Autowired
     public ApplicationController(AccountServiceDatabase accountService) {
         this.accountService = accountService;
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity databaseError(HttpServletRequest request, DataAccessException exception) {
+
+        LOGGER.error("Request: " + request.getRequestURL() + " raised " + exception);
+        return ResponseEntity
+                   .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .body(new ErrorData(ErrorCode.INTERNAL, "Internal database error."));
     }
 
     @PostMapping(path = "/register/", consumes = "application/json", produces = "application/json")
@@ -47,14 +59,6 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INSUFFICIENT, "Not all fields were provided."));
         }
 
-        if (accountService.hasAccount(body.getLogin())) {
-
-            LOGGER.debug("User with login {} is already registered.", body.getLogin());
-            return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
-        }
-
         if (!Validator.checkPassword(body)) {
 
             LOGGER.debug("Invalid password was provided for registration.");
@@ -71,11 +75,20 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
-        final Account account = accountService.createAccount(body.getLogin(), body.getPassword(), body.getEmail());
-        assert account != null;
-        LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
-        session.setAttribute(SESSION_ATTR, account.getLogin());
-        return ResponseEntity.ok(new AccountData(account));
+        try {
+            final Account account = accountService.createAccount(body.getLogin(), body.getPassword(), body.getEmail());
+            LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
+            session.setAttribute(SESSION_ATTR, account.getLogin());
+            return ResponseEntity.ok(new AccountData(account));
+
+        } catch ( DuplicateKeyException exception ) {
+
+            LOGGER.debug("User with login {} is already registered.", body.getLogin());
+            return ResponseEntity
+                       .status(HttpStatus.FORBIDDEN)
+                       .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
+        }
+
     }
 
     @PostMapping(path = "/login/", consumes = "application/json")
@@ -134,14 +147,6 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
         }
 
-        if (body.hasLogin() && !body.getLogin().equals(account.getLogin()) && accountService.hasAccount(body.getLogin())) {
-
-            LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
-            return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
-        }
-
         if (body.hasPassword() && !Validator.checkPassword(body)) {
 
             LOGGER.debug("Invalid password was provided for changing.");
@@ -158,15 +163,22 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.INVALID_FIELD, "Invalid email was provided."));
         }
 
-        account = accountService.updateAccount(
-            account.getLogin(),
-            body.getLogin(),
-            body.getPassword(),
-            body.getEmail(),
-            null);
-        assert account != null;
-        LOGGER.info("User #{} was changed -> {}, {}.", account.getId(), account.getLogin(), account.getEmail());
-        return ResponseEntity.ok(new AccountData(account));
+        try {
+            account = accountService.updateAccountInfo(
+                account.getLogin(),
+                body.getLogin(),
+                body.getPassword(),
+                body.getEmail());
+            LOGGER.info("User #{} was changed -> {}, {}.", account.getId(), account.getLogin(), account.getEmail());
+            return ResponseEntity.ok(new AccountData(account));
+
+        } catch ( DuplicateKeyException exception ) {
+
+            LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
+            return ResponseEntity
+                       .status(HttpStatus.FORBIDDEN)
+                       .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
+        }
     }
 
     @PostMapping(path = "/logout/")
@@ -209,6 +221,17 @@ public class ApplicationController {
 
     @GetMapping(path = "/best/", produces = "application/json")
     public ResponseEntity getBest() {
-        return ResponseEntity.ok(accountService.getBest().stream().map(AccountData::new).collect(Collectors.toCollection(LinkedHashSet::new)));
+        return ResponseEntity.ok(accountService
+                                     .getBest().stream().map(AccountData::new)
+                                     .collect(Collectors.toCollection(LinkedHashSet::new)));
+    }
+
+    @PostMapping(path = "/update-rating/", produces = "application/json")
+    public ResponseEntity updateRating(@RequestBody RatingChangeData data) {
+        return ResponseEntity.ok(new AccountData(
+                                                    accountService.updateAccountRating(
+                                                        data.getLogin(),
+                                                        data.getRatingDelta()))
+        );
     }
 }
