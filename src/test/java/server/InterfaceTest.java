@@ -1,8 +1,12 @@
 package server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import database.Account;
 import database.AccountService;
 import database.AccountServiceDatabase;
+import messagedata.AccountData;
+import messagedata.ErrorCode;
+import messagedata.ErrorData;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;
@@ -63,13 +67,13 @@ public class InterfaceTest {
     public void testRegisterLoggedIn() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "anyName1",
-                                                    CORRECT_PASSWORD,
-                                                    CORRECT_EMAIL);
+            "anyName1",
+            CORRECT_PASSWORD,
+            CORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
-                         .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
+                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
@@ -80,8 +84,8 @@ public class InterfaceTest {
     public void testRegisterNotAllFields() throws Exception {
 
         AccountData data = new AccountData(
-                                              "anyName",
-                                              CORRECT_PASSWORD,
+            "anyName",
+            CORRECT_PASSWORD,
             null);
 
         mvc
@@ -92,9 +96,9 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
         data = new AccountData(
-                                  "anyName",
+            "anyName",
             null,
-                                  CORRECT_EMAIL);
+            CORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
@@ -105,8 +109,8 @@ public class InterfaceTest {
 
         data = new AccountData(
             null,
-                                  CORRECT_PASSWORD,
-                                  CORRECT_EMAIL);
+            CORRECT_PASSWORD,
+            CORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
@@ -120,9 +124,9 @@ public class InterfaceTest {
     public void testRegisterInvalidPassword() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "anyName",
-                                                    INCORRECT_PASSWORD,
-                                                    CORRECT_EMAIL);
+            "anyName",
+            INCORRECT_PASSWORD,
+            CORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
@@ -136,9 +140,9 @@ public class InterfaceTest {
     public void testRegisterInvalidEmail() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "anyName",
-                                                    CORRECT_PASSWORD,
-                                                    INCORRECT_EMAIL);
+            "anyName",
+            CORRECT_PASSWORD,
+            INCORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
@@ -154,8 +158,8 @@ public class InterfaceTest {
         final String login = "existingName";
         final AccountData data = new AccountData(
             login,
-                                                    CORRECT_PASSWORD,
-                                                    CORRECT_EMAIL);
+            CORRECT_PASSWORD,
+            CORRECT_EMAIL);
 
         accountService.createAccount(login, CORRECT_PASSWORD, CORRECT_EMAIL);
 
@@ -171,9 +175,9 @@ public class InterfaceTest {
     public void testRegisterSuccess() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "registerName",
-                                                    CORRECT_PASSWORD,
-                                                    CORRECT_EMAIL);
+            "registerName",
+            CORRECT_PASSWORD,
+            CORRECT_EMAIL);
 
         mvc
             .perform(post("/register/")
@@ -196,13 +200,13 @@ public class InterfaceTest {
     public void testSignInLoggedIn() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "anyName1",
-                                                    CORRECT_PASSWORD,
+            "anyName1",
+            CORRECT_PASSWORD,
             null);
 
         mvc
             .perform(post("/login/")
-                         .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
+                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
@@ -213,7 +217,7 @@ public class InterfaceTest {
     public void testSignInNotAllFields() throws Exception {
 
         AccountData data = new AccountData(
-                                              "anyName",
+            "anyName",
             null,
             null);
 
@@ -226,7 +230,7 @@ public class InterfaceTest {
 
         data = new AccountData(
             null,
-                                  CORRECT_PASSWORD,
+            CORRECT_PASSWORD,
             null);
 
         mvc
@@ -241,8 +245,8 @@ public class InterfaceTest {
     public void testSignInInvalidCredentials() throws Exception {
 
         AccountData data = new AccountData(
-                                              "anyName",
-                                              CORRECT_PASSWORD,
+            "anyName",
+            CORRECT_PASSWORD,
             null);
 
         mvc
@@ -264,7 +268,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
 
         data = new AccountData(
-                                  "anyName2",
+            "anyName2",
             password,
             null);
 
@@ -280,8 +284,8 @@ public class InterfaceTest {
     public void testSignInSuccess() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    "loginName",
-                                                    CORRECT_PASSWORD,
+            "loginName",
+            CORRECT_PASSWORD,
             null);
         accountService.createAccount(data.getLogin(), data.getPassword(), CORRECT_EMAIL);
 
@@ -316,7 +320,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                         .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName")
+                .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isNotFound())
@@ -353,7 +357,7 @@ public class InterfaceTest {
 
         final AccountData data = new AccountData(
             null,
-                                                    INCORRECT_PASSWORD,
+            INCORRECT_PASSWORD,
             null);
 
         final Account account = accountService.createAccount(
@@ -374,9 +378,9 @@ public class InterfaceTest {
     public void testChangeAccountInvalidEmail() throws Exception {
 
         final AccountData data = new AccountData(
-                                                    null,
-                                                    null,
-                                                    INCORRECT_EMAIL);
+            null,
+            null,
+            INCORRECT_EMAIL);
 
         final Account account = accountService.createAccount(
             "AnyName",
@@ -428,9 +432,9 @@ public class InterfaceTest {
 
         final String newPassword = "initialPassword";
         final AccountData data = new AccountData(
-                                                    "newName",
-                                                    newPassword,
-                                                    "newMail@mail.ru");
+            "newName",
+            newPassword,
+            "newMail@mail.ru");
 
         mvc
             .perform(post("/change/")
@@ -456,9 +460,9 @@ public class InterfaceTest {
 
         final String newPassword = "newPassword";
         final AccountData data = new AccountData(
-                                                    account.getLogin(),
-                                                    newPassword,
-                                                    "newMail@mail.ru");
+            account.getLogin(),
+            newPassword,
+            "newMail@mail.ru");
 
         mvc
             .perform(post("/change/")
@@ -482,7 +486,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/logout/")
-                         .sessionAttr(ApplicationController.SESSION_ATTR, "anyName"))
+                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName"))
             .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, ( Object ) null));
     }
 
@@ -503,7 +507,7 @@ public class InterfaceTest {
 
         mvc
             .perform(get("/who-am-i/")
-                         .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName"))
+                .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }

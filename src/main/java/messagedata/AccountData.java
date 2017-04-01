@@ -1,9 +1,10 @@
-package server;
+package messagedata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import database.Account;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +19,7 @@ public class AccountData {
     private final String login;
     private final String password;
     private final String email;
-    private int rating;
+    private final int rating;
 
     @JsonCreator
     public AccountData(

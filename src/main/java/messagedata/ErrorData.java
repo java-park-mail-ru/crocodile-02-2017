@@ -1,4 +1,4 @@
-package server;
+package messagedata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;

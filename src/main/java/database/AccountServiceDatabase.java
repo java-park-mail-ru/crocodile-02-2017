@@ -7,7 +7,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import server.Account;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,7 +24,7 @@ public class AccountServiceDatabase implements AccountService {
 
     private static final AccountRowMapper ACCOUNT_MAPPER = new AccountRowMapper();
 
-    private NamedParameterJdbcTemplate database;
+    private final NamedParameterJdbcTemplate database;
 
     public AccountServiceDatabase(NamedParameterJdbcTemplate database) {
 
@@ -42,19 +41,17 @@ public class AccountServiceDatabase implements AccountService {
                 resultSet.getString("login"),
                 resultSet.getString("passhash"),
                 resultSet.getString("email"),
-                resultSet.getInt("rating")
-            );
+                resultSet.getInt("rating"));
         }
     }
 
     @Override
     public @NotNull Account createAccount(
-                                             @NotNull String login,
-                                             @NotNull String password,
-                                             @NotNull String email) throws DataRetrievalFailureException {
+        @NotNull String login,
+        @NotNull String password,
+        @NotNull String email) throws DataRetrievalFailureException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-
         source.addValue(LOGIN_PARAM, login);
         source.addValue(PASSWORD_HASH_PARAM, Account.hashPassword(password));
         source.addValue(EMAIL_PARAM, email);
@@ -77,7 +74,6 @@ public class AccountServiceDatabase implements AccountService {
     public @Nullable Account findAccount(@Nullable String login) {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-
         source.addValue(LOGIN_PARAM, login);
 
         final String selectAccountSql = String.format(
@@ -91,13 +87,12 @@ public class AccountServiceDatabase implements AccountService {
 
     @Override
     public @NotNull Account updateAccountInfo(
-                                                 @NotNull String oldLogin,
-                                                 @Nullable String login,
-                                                 @Nullable String password,
-                                                 @Nullable String email) throws DataRetrievalFailureException {
+        @NotNull String oldLogin,
+        @Nullable String login,
+        @Nullable String password,
+        @Nullable String email) throws DataRetrievalFailureException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-
         source.addValue(LOGIN_PARAM, login);
         source.addValue(PASSWORD_HASH_PARAM, Account.hashPassword(password));
         source.addValue(EMAIL_PARAM, email);
@@ -124,7 +119,6 @@ public class AccountServiceDatabase implements AccountService {
     public @NotNull Account updateAccountRating(@NotNull String login, int ratingDelta) {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-
         source.addValue(LOGIN_PARAM, login);
         source.addValue(RATING_DELTA_PARAM, ratingDelta);
 
@@ -143,15 +137,9 @@ public class AccountServiceDatabase implements AccountService {
     }
 
     @Override
-    public boolean hasAccount(@Nullable String login) {
-        return findAccount(login) != null;
-    }
-
-    @Override
     public List<Account> getBest() {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-
         source.addValue(LIMIT_PARAM, BEST_COUNT);
 
         final String selectAccountSql = String.format(

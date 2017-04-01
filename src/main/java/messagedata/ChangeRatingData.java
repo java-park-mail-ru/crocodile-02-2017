@@ -1,10 +1,10 @@
-package server;
+package messagedata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @SuppressWarnings("unused")
-public class RatingChangeData {
+public class ChangeRatingData {
 
     public static final String LOGIN_ATTR = "login";
     public static final String RATING_DELTA_ATTR = "delta";
@@ -13,9 +13,9 @@ public class RatingChangeData {
     private final int ratingDelta;
 
     @JsonCreator
-    public RatingChangeData(
-                               @JsonProperty(LOGIN_ATTR) String login,
-                               @JsonProperty(RATING_DELTA_ATTR) int ratingDelta) {
+    public ChangeRatingData(
+        @JsonProperty(LOGIN_ATTR) String login,
+        @JsonProperty(RATING_DELTA_ATTR) int ratingDelta) {
 
         this.login = login;
         this.ratingDelta = ratingDelta;

@@ -1,4 +1,4 @@
-package server;
+package messagedata;
 
 public enum ErrorCode {
 
@@ -11,7 +11,7 @@ public enum ErrorCode {
     INVALID_FIELD("invalid_field"),
     INTERNAL("internal");
 
-    private String text;
+    private final String text;
 
     ErrorCode(final String text) {
 

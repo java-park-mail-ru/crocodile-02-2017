@@ -1,6 +1,7 @@
 package server;
 
 import database.AccountServiceDatabase;
+import database.DashServiceDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +18,15 @@ public class ApplicationConfiguration {
         this.environment = environment;
     }
 
-    @SuppressWarnings("SpringJavaAutowiringInspection")
     @Bean
-    public AccountServiceDatabase serviceDatabase(NamedParameterJdbcTemplate database) {
+    public AccountServiceDatabase accountService(NamedParameterJdbcTemplate database) {
         return new AccountServiceDatabase(database);
     }
+
+    @Bean
+    public DashServiceDatabase dashService(NamedParameterJdbcTemplate database) {
+        return new DashServiceDatabase(database);
+    }
+
 }
 

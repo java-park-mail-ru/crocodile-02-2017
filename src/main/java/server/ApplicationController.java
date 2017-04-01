@@ -1,6 +1,9 @@
 package server;
 
+import database.Account;
 import database.AccountServiceDatabase;
+import database.DashServiceDatabase;
+import messagedata.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,10 +28,15 @@ public class ApplicationController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountServiceDatabase accountService;
+    private final DashServiceDatabase dashService;
 
     @Autowired
-    public ApplicationController(AccountServiceDatabase accountService) {
+    public ApplicationController(
+        AccountServiceDatabase accountService,
+        DashServiceDatabase dashService) {
+
         this.accountService = accountService;
+        this.dashService = dashService;
     }
 
     @ExceptionHandler(DataAccessException.class)
@@ -36,8 +44,8 @@ public class ApplicationController {
 
         LOGGER.error("Request: " + request.getRequestURL() + " raised " + exception);
         return ResponseEntity
-                   .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .body(new ErrorData(ErrorCode.INTERNAL, "Internal database error."));
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(new ErrorData(ErrorCode.INTERNAL, "Internal database error."));
     }
 
     @PostMapping(path = "/register/", consumes = "application/json", produces = "application/json")
@@ -85,8 +93,8 @@ public class ApplicationController {
 
             LOGGER.debug("User with login {} is already registered.", body.getLogin());
             return ResponseEntity
-                       .status(HttpStatus.FORBIDDEN)
-                       .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
         }
 
     }
@@ -176,8 +184,8 @@ public class ApplicationController {
 
             LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
             return ResponseEntity
-                       .status(HttpStatus.FORBIDDEN)
-                       .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorData(ErrorCode.EXISTS, "Login is already taken."));
         }
     }
 
@@ -222,16 +230,24 @@ public class ApplicationController {
     @GetMapping(path = "/best/", produces = "application/json")
     public ResponseEntity getBest() {
         return ResponseEntity.ok(accountService
-                                     .getBest().stream().map(AccountData::new)
-                                     .collect(Collectors.toCollection(LinkedHashSet::new)));
+            .getBest().stream().map(AccountData::new)
+            .collect(Collectors.toCollection(LinkedHashSet::new)));
     }
 
+    ///////////////////////////////////
+    //Beta section
+
     @PostMapping(path = "/update-rating/", produces = "application/json")
-    public ResponseEntity updateRating(@RequestBody RatingChangeData data) {
+    public ResponseEntity updateRating(@RequestBody ChangeRatingData data) {
         return ResponseEntity.ok(new AccountData(
-                                                    accountService.updateAccountRating(
-                                                        data.getLogin(),
-                                                        data.getRatingDelta()))
+            accountService.updateAccountRating(
+                data.getLogin(),
+                data.getRatingDelta()))
         );
+    }
+
+    @GetMapping(path = "/get-dashes/", produces = "application/json")
+    public ResponseEntity getDash(@RequestParam(value = "login") String login) {
+        return ResponseEntity.ok(new DashesData(dashService.getRandomDash(login)));
     }
 }
