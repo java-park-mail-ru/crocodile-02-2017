@@ -11,16 +11,18 @@ import org.springframework.stereotype.Service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class DashServiceDatabase implements DashService {
 
     private static final String LOGIN_PARAM = "plogin";
+    private static final String WORD_PARAM = "pword";
 
+    private static final Random RANDOM = new Random();
     private static final DashRowMapper DASH_MAPPER = new DashRowMapper();
 
     private final NamedParameterJdbcTemplate database;
-
 
     @Autowired
     public DashServiceDatabase(NamedParameterJdbcTemplate database) {
@@ -40,21 +42,75 @@ public class DashServiceDatabase implements DashService {
     }
 
     @Override
+    public void addUsedWord(@NotNull String login, @NotNull String word) throws DataRetrievalFailureException {
+
+        final MapSqlParameterSource source = new MapSqlParameterSource();
+        source.addValue(WORD_PARAM, word);
+        source.addValue(LOGIN_PARAM, login);
+
+        final String insertDashesRecordText = String.format(
+            " INSERT INTO account_dashes ( accountid, dashesid )" +
+                " SELECT account.id, dashes.id from account" +
+                " JOIN dashes ON dashes.word = :%1$s" +
+                " WHERE login = :%2$s",
+            WORD_PARAM, LOGIN_PARAM);
+
+        final int insertsCount = database.update(insertDashesRecordText, source);
+        if (insertsCount != 1) {
+            throw new DataRetrievalFailureException("Used words insertion error");
+        }
+    }
+
+    @Override
     public @NotNull Dashes getRandomDash(@NotNull String login) throws DataRetrievalFailureException {
+
+        if (checkAllWordsUsed(login)) {
+            removeUsedWords(login);
+        }
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
         source.addValue(LOGIN_PARAM, login);
 
-        //todo update this method
         final String selectDashSql = String.format(
-            "SELECT * from dash",
+            " SELECT * FROM dashes" +
+                " WHERE dashes.id NOT IN (" +
+                " SELECT dashesid FROM account_dashes" +
+                " JOIN account ON account.login = :%1$s AND account.id = accountid )",
             LOGIN_PARAM);
 
-
         final List<Dashes> result = database.query(selectDashSql, source, DASH_MAPPER);
-        if (result.size() != 1) {
-            throw new DataRetrievalFailureException("Account creation error");
+        if (result.isEmpty()) {
+            throw new DataRetrievalFailureException("Dashes retrieval error");
         }
-        return result.get(0);
+        return result.get(RANDOM.nextInt(result.size()));
+    }
+
+    private boolean checkAllWordsUsed(@NotNull String login) {
+
+        final MapSqlParameterSource source = new MapSqlParameterSource();
+        source.addValue(LOGIN_PARAM, login);
+
+        final String checkWordsSql = String.format(
+            " SELECT count(*) FROM dashes" +
+                " WHERE dashes.id NOT IN (" +
+                " SELECT dashesid FROM account_dashes" +
+                " JOIN account ON account.login = :%1$s AND account.id = accountid )",
+            LOGIN_PARAM);
+
+        final int result = database.queryForObject(checkWordsSql, source, Integer.class);
+        return result == 0;
+    }
+
+    private void removeUsedWords(@NotNull String login) {
+
+        final MapSqlParameterSource source = new MapSqlParameterSource();
+        source.addValue(LOGIN_PARAM, login);
+
+        final String checkWordsSql = String.format(
+            " DELETE FROM account_dashes USING account" +
+                " WHERE account.login = :%1$s",
+            LOGIN_PARAM);
+
+        database.update(checkWordsSql, source);
     }
 }

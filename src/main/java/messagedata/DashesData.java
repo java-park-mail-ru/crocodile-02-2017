@@ -13,6 +13,10 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class DashesData {
 
+    public static final String COLOR_ATTR = "color";
+    public static final String WORD_ATTR = "word";
+    public static final String POINTS_ATTR = "points";
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeFactory TYPE_FACTORY = new ObjectMapper().getTypeFactory();
 
@@ -60,18 +64,18 @@ public class DashesData {
         }
     }
 
-    @JsonProperty("color")
+    @JsonProperty(COLOR_ATTR)
     public String getColor() {
         return dashes.getColor();
     }
 
-    @JsonProperty("word")
+    @JsonProperty(WORD_ATTR)
     public String getWord() {
         return dashes.getWord();
     }
 
     @SuppressWarnings("OverlyBroadThrowsClause")
-    @JsonProperty("points")
+    @JsonProperty(POINTS_ATTR)
     public List<DrawingPoint> getPoints() throws IOException {
 
         return new ObjectMapper()

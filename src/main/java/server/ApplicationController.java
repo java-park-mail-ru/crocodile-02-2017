@@ -3,7 +3,10 @@ package server;
 import database.Account;
 import database.AccountServiceDatabase;
 import database.DashServiceDatabase;
-import messagedata.*;
+import messagedata.AccountData;
+import messagedata.DashesData;
+import messagedata.ErrorCode;
+import messagedata.ErrorData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -238,16 +241,24 @@ public class ApplicationController {
     //Beta section
 
     @PostMapping(path = "/update-rating/", produces = "application/json")
-    public ResponseEntity updateRating(@RequestBody ChangeRatingData data) {
-        return ResponseEntity.ok(new AccountData(
-            accountService.updateAccountRating(
-                data.getLogin(),
-                data.getRatingDelta()))
-        );
+    public ResponseEntity updateRating(
+        @RequestParam(value = "login") String login,
+        @RequestParam(value = "delta") int delta) {
+
+        return ResponseEntity.ok(new AccountData(accountService.updateAccountRating(login, delta)));
     }
 
     @GetMapping(path = "/get-dashes/", produces = "application/json")
-    public ResponseEntity getDash(@RequestParam(value = "login") String login) {
+    public ResponseEntity getDashes(@RequestParam(value = "login") String login) {
         return ResponseEntity.ok(new DashesData(dashService.getRandomDash(login)));
+    }
+
+    @PostMapping(path = "/add-used-dashes/")
+    public ResponseEntity addUsedDashes(
+        @RequestParam(value = "login") String login,
+        @RequestParam(value = "word") String word) {
+
+        dashService.addUsedWord(login, word);
+        return ResponseEntity.ok("");
     }
 }

@@ -73,6 +73,12 @@
             <version>LATEST</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>LATEST</version>
+        </dependency>
+
     </dependencies>
 
     <build>
