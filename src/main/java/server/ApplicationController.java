@@ -256,7 +256,7 @@ public class ApplicationController {
         final String login = (String) session.getAttribute(SESSION_ATTR);
         final Dashes dashes = dashService.getRandomDash(login);
         session.setAttribute(DASHES_ATTR, dashes.getId());
-        return ResponseEntity.ok(new DashesData(dashService.getRandomDash(login)));
+        return ResponseEntity.ok(new DashesData(dashes));
     }
 
     @GetMapping(path = "/check-answer/", produces = "application/json")
