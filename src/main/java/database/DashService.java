@@ -5,7 +5,9 @@ import org.springframework.dao.DataAccessException;
 
 public interface DashService {
 
-    void addUsedWord(@NotNull String login, @NotNull String word) throws DataAccessException;
+    boolean checkWord(@NotNull String word, int id);
+
+    void addUsedDashes(@NotNull String login, int id) throws DataAccessException;
 
     @NotNull Dashes getRandomDash(@NotNull String login) throws DataAccessException;
 }

@@ -1,7 +1,6 @@
 package database;
 
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -17,6 +16,7 @@ import java.util.Random;
 public class DashServiceDatabase implements DashService {
 
     private static final String LOGIN_PARAM = "plogin";
+    private static final String ID_PARAM = "pid";
     private static final String WORD_PARAM = "pword";
 
     private static final Random RANDOM = new Random();
@@ -24,7 +24,6 @@ public class DashServiceDatabase implements DashService {
 
     private final NamedParameterJdbcTemplate database;
 
-    @Autowired
     public DashServiceDatabase(NamedParameterJdbcTemplate database) {
         this.database = database;
     }
@@ -35,6 +34,7 @@ public class DashServiceDatabase implements DashService {
         public Dashes mapRow(ResultSet resultSet, int i) throws SQLException {
 
             return new Dashes(
+                resultSet.getInt("id"),
                 resultSet.getString("color"),
                 resultSet.getString("word"),
                 resultSet.getString("points"));
@@ -42,18 +42,32 @@ public class DashServiceDatabase implements DashService {
     }
 
     @Override
-    public void addUsedWord(@NotNull String login, @NotNull String word) throws DataRetrievalFailureException {
+    public boolean checkWord(@NotNull String word, int id) {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
+        source.addValue(ID_PARAM, id);
         source.addValue(WORD_PARAM, word);
+
+        final String checkWordSql = String.format(
+            " SELECT :%1$s = dashes.word FROM dashes" +
+                " WHERE id = :%2$s",
+            WORD_PARAM, ID_PARAM);
+
+        return database.queryForObject(checkWordSql, source, Boolean.class);
+    }
+
+    @Override
+    public void addUsedDashes(@NotNull String login, int id) throws DataRetrievalFailureException {
+
+        final MapSqlParameterSource source = new MapSqlParameterSource();
+        source.addValue(ID_PARAM, id);
         source.addValue(LOGIN_PARAM, login);
 
         final String insertDashesRecordText = String.format(
             " INSERT INTO account_dashes ( accountid, dashesid )" +
-                " SELECT account.id, dashes.id from account" +
-                " JOIN dashes ON dashes.word = :%1$s" +
+                " SELECT account.id, :%1$s from account" +
                 " WHERE login = :%2$s",
-            WORD_PARAM, LOGIN_PARAM);
+            ID_PARAM, LOGIN_PARAM);
 
         final int insertsCount = database.update(insertDashesRecordText, source);
         if (insertsCount != 1) {

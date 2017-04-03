@@ -3,6 +3,7 @@ package server;
 import database.Account;
 import database.AccountServiceDatabase;
 import database.DashServiceDatabase;
+import database.Dashes;
 import messagedata.AccountData;
 import messagedata.DashesData;
 import messagedata.ErrorCode;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 public class ApplicationController {
 
     public static final String SESSION_ATTR = "login";
+    public static final String DASHES_ATTR = "picid";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountServiceDatabase accountService;
@@ -92,7 +95,7 @@ public class ApplicationController {
             session.setAttribute(SESSION_ATTR, account.getLogin());
             return ResponseEntity.ok(new AccountData(account));
 
-        } catch ( DuplicateKeyException exception ) {
+        } catch (DuplicateKeyException exception) {
 
             LOGGER.debug("User with login {} is already registered.", body.getLogin());
             return ResponseEntity
@@ -147,7 +150,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String login = ( String ) session.getAttribute(SESSION_ATTR);
+        final String login = (String) session.getAttribute(SESSION_ATTR);
         Account account = accountService.findAccount(login);
 
         if (account == null) {
@@ -183,7 +186,7 @@ public class ApplicationController {
             LOGGER.info("User #{} was changed -> {}, {}.", account.getId(), account.getLogin(), account.getEmail());
             return ResponseEntity.ok(new AccountData(account));
 
-        } catch ( DuplicateKeyException exception ) {
+        } catch (DuplicateKeyException exception) {
 
             LOGGER.debug("Login {} to change on is already taken.", body.getLogin());
             return ResponseEntity
@@ -215,7 +218,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String login = ( String ) session.getAttribute(SESSION_ATTR);
+        final String login = (String) session.getAttribute(SESSION_ATTR);
         final Account account = accountService.findAccount(login);
 
         if (account != null) {
@@ -241,24 +244,29 @@ public class ApplicationController {
     //Beta section
 
     @PostMapping(path = "/update-rating/", produces = "application/json")
-    public ResponseEntity updateRating(
-        @RequestParam(value = "login") String login,
-        @RequestParam(value = "delta") int delta) {
+    public ResponseEntity updateRating(@RequestParam(value = "delta") int delta, HttpSession session) {
 
+        final String login = (String) session.getAttribute(SESSION_ATTR);
         return ResponseEntity.ok(new AccountData(accountService.updateAccountRating(login, delta)));
     }
 
     @GetMapping(path = "/get-dashes/", produces = "application/json")
-    public ResponseEntity getDashes(@RequestParam(value = "login") String login) {
+    public ResponseEntity getDashes(HttpSession session) {
+
+        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final Dashes dashes = dashService.getRandomDash(login);
+        session.setAttribute(DASHES_ATTR, dashes.getId());
         return ResponseEntity.ok(new DashesData(dashService.getRandomDash(login)));
     }
 
-    @PostMapping(path = "/add-used-dashes/")
-    public ResponseEntity addUsedDashes(
-        @RequestParam(value = "login") String login,
-        @RequestParam(value = "word") String word) {
+    @GetMapping(path = "/check-answer/", produces = "application/json")
+    public ResponseEntity addUsedDashes(@RequestParam(value = "word") String word, HttpSession session) {
 
-        dashService.addUsedWord(login, word);
-        return ResponseEntity.ok("");
+        final int dashesID = (int) session.getAttribute(DASHES_ATTR);
+        final boolean isCorrect = dashService.checkWord(word, dashesID);
+
+        return (isCorrect) ?
+            ResponseEntity.ok("{ \"correct\": true }") :
+            ResponseEntity.ok("{ \"correct\": false }");
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+@SuppressWarnings({"SpringJavaAutowiringInspection", "SpringFacetCodeInspection"})
 @Configuration
 public class ApplicationConfiguration {
 

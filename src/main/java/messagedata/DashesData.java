@@ -1,6 +1,7 @@
 package messagedata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -69,7 +70,7 @@ public class DashesData {
         return dashes.getColor();
     }
 
-    @JsonProperty(WORD_ATTR)
+    @JsonIgnore
     public String getWord() {
         return dashes.getWord();
     }

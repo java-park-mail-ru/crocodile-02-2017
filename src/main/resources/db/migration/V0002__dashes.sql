@@ -1,8 +1,8 @@
 CREATE TABLE public.dashes (
-  id     SERIAL PRIMARY KEY           NOT NULL,
-  color  CHARACTER VARYING(30)        NOT NULL,
-  word   CHARACTER VARYING(50) UNIQUE NOT NULL,
-  points JSON                         NOT NULL
+  id     SERIAL PRIMARY KEY     NOT NULL,
+  color  CHARACTER VARYING(30)  NOT NULL,
+  word   CHARACTER VARYING(50)  NOT NULL,
+  points JSON                   NOT NULL
 );
 
 CREATE TABLE public.account_dashes (
