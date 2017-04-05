@@ -310,4 +310,19 @@ public class ApplicationController {
 
         return ResponseEntity.ok("{ \"correct\": false }");
     }
+
+    @PostMapping(path = "/exit-game/", produces = "application/json")
+    public ResponseEntity manualShutdown(HttpSession session) {
+
+        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final int gameId = (int) session.getAttribute(GAME_ATTR);
+        final SingleGame game = currentSingleGames.get(gameId);
+
+        if ((game != null) && game.getLogin().equals(login)) {
+
+            changeGameState(session, gameId, true);
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("");
+    }
 }
