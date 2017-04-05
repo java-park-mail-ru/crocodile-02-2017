@@ -1,9 +1,6 @@
 package server;
 
-import database.Account;
-import database.AccountServiceDatabase;
-import database.DashServiceDatabase;
-import database.Dashes;
+import database.*;
 import messagedata.AccountData;
 import messagedata.DashesData;
 import messagedata.ErrorCode;
@@ -19,7 +16,11 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,20 +30,27 @@ import java.util.stream.Collectors;
 public class ApplicationController {
 
     public static final String SESSION_ATTR = "login";
-    public static final String DASHES_ATTR = "picid";
+    public static final String GAME_ATTR = "pgameid";
+    public static final int SINGLE_GAME_TIME = 30;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
-    private final AccountServiceDatabase accountService;
-    private final DashServiceDatabase dashService;
+    private final AccountServiceDb accountService;
+    private final DashesServiceDb dashesService;
+    private final SingleGameServiceDb singleGameService;
+
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final HashMap<Integer, SingleGame> currentSingleGames = new HashMap<>();
 
     @Autowired
     public ApplicationController(
-        AccountServiceDatabase accountService,
-        DashServiceDatabase dashService) {
+        AccountServiceDb accountService,
+        DashesServiceDb dashesService,
+        SingleGameServiceDb singleGameService) {
 
         this.accountService = accountService;
-        this.dashService = dashService;
+        this.dashesService = dashesService;
+        this.singleGameService = singleGameService;
     }
 
     @ExceptionHandler(DataAccessException.class)
@@ -241,32 +249,65 @@ public class ApplicationController {
     }
 
     ///////////////////////////////////
-    //Beta section
+    //Temp section
 
-    @PostMapping(path = "/update-rating/", produces = "application/json")
-    public ResponseEntity updateRating(@RequestParam(value = "delta") int delta, HttpSession session) {
+    private synchronized boolean changeGameState(HttpSession session, int gameId, boolean shutdown) {
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
-        return ResponseEntity.ok(new AccountData(accountService.updateAccountRating(login, delta)));
+        if (shutdown && currentSingleGames.containsKey(gameId)) {
+
+            currentSingleGames.remove(gameId);
+            singleGameService.shutdownGame(gameId);
+            session.removeAttribute(GAME_ATTR);
+            return true;
+        }
+
+        return false;
     }
 
-    @GetMapping(path = "/get-dashes/", produces = "application/json")
-    public ResponseEntity getDashes(HttpSession session) {
+    private Runnable runDeletion(HttpSession session, int gameId) {
+
+        return () -> changeGameState(session, gameId, true);
+    }
+
+    @PostMapping(path = "/start-game/", produces = "application/json")
+    public ResponseEntity startSingleGame(HttpSession session) {
 
         final String login = (String) session.getAttribute(SESSION_ATTR);
-        final Dashes dashes = dashService.getRandomDash(login);
-        session.setAttribute(DASHES_ATTR, dashes.getId());
+        final Dashes dashes = dashesService.getRandomDash(login);
+        LOGGER.info("Got dashes {}, {}", dashes.getId(), dashes.getWord());
+
+        final SingleGame game = singleGameService.createGame(login, dashes.getId());
+        currentSingleGames.put(game.getId(), game);
+        session.setAttribute(GAME_ATTR, game.getId());
+
+        scheduler.schedule(runDeletion(session, game.getId()), SINGLE_GAME_TIME, TimeUnit.SECONDS);
+
         return ResponseEntity.ok(new DashesData(dashes));
     }
 
-    @GetMapping(path = "/check-answer/", produces = "application/json")
-    public ResponseEntity addUsedDashes(@RequestParam(value = "word") String word, HttpSession session) {
+    @PostMapping(path = "/check-answer/", produces = "application/json")
+    public ResponseEntity checkAnswer(@RequestParam(value = "word") String word, HttpSession session) {
 
-        final int dashesID = (int) session.getAttribute(DASHES_ATTR);
-        final boolean isCorrect = dashService.checkWord(word, dashesID);
+        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final int gameId = (int) session.getAttribute(GAME_ATTR);
+        final SingleGame game = currentSingleGames.get(gameId);
 
-        return (isCorrect) ?
-            ResponseEntity.ok("{ \"correct\": true }") :
-            ResponseEntity.ok("{ \"correct\": false }");
+        if ((game == null) || !game.getLogin().equals(login)) {
+
+            return ResponseEntity.ok("{ \"correct\": false }");
+        }
+
+        final int dashesId = game.getDashesId();
+        final boolean isCorrect = dashesService.checkWord(word, dashesId);
+
+        if (changeGameState(session, gameId, isCorrect)) {
+
+            dashesService.addUsedDashes(login, dashesId);
+            accountService.updateAccountRating(login, 1);
+            session.removeAttribute(GAME_ATTR);
+            return ResponseEntity.ok("{ \"correct\": true }");
+        }
+
+        return ResponseEntity.ok("{ \"correct\": false }");
     }
 }

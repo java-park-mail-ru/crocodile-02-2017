@@ -3,7 +3,7 @@ package server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import database.Account;
 import database.AccountService;
-import database.AccountServiceDatabase;
+import database.AccountServiceDb;
 import messagedata.AccountData;
 import messagedata.ErrorCode;
 import messagedata.ErrorData;
@@ -43,7 +43,7 @@ public class InterfaceTest {
     private static final String INCORRECT_EMAIL = "incorrectmail.ru";
 
     @Autowired
-    private AccountServiceDatabase accountService;
+    private AccountServiceDb accountService;
 
     @Autowired
     private MockMvc mvc;

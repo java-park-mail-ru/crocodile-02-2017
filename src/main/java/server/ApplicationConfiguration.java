@@ -1,7 +1,8 @@
 package server;
 
-import database.AccountServiceDatabase;
-import database.DashServiceDatabase;
+import database.AccountServiceDb;
+import database.DashesServiceDb;
+import database.SingleGameServiceDb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,13 +21,18 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public AccountServiceDatabase accountService(NamedParameterJdbcTemplate database) {
-        return new AccountServiceDatabase(database);
+    public AccountServiceDb accountService(NamedParameterJdbcTemplate database) {
+        return new AccountServiceDb(database);
     }
 
     @Bean
-    public DashServiceDatabase dashService(NamedParameterJdbcTemplate database) {
-        return new DashServiceDatabase(database);
+    public DashesServiceDb dashesService(NamedParameterJdbcTemplate database) {
+        return new DashesServiceDb(database);
+    }
+
+    @Bean
+    public SingleGameServiceDb singleGameService(NamedParameterJdbcTemplate database) {
+        return new SingleGameServiceDb(database);
     }
 
 }

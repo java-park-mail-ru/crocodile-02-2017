@@ -23,7 +23,7 @@ public interface AccountService {
         @Nullable String password,
         @Nullable String email) throws DataAccessException;
 
-    @NotNull Account updateAccountRating(@NotNull String login, int ratingDelta);
+    @NotNull Account updateAccountRating(@NotNull String login, int ratingDelta) throws DataAccessException;
 
     List<Account> getBest();
 }

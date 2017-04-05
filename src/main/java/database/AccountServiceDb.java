@@ -13,7 +13,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 @Service
-public class AccountServiceDatabase implements AccountService {
+public class AccountServiceDb implements AccountService {
 
     private static final String LOGIN_PARAM = "plogin";
     private static final String PASSWORD_HASH_PARAM = "ppasshash";
@@ -26,7 +26,7 @@ public class AccountServiceDatabase implements AccountService {
 
     private final NamedParameterJdbcTemplate database;
 
-    public AccountServiceDatabase(NamedParameterJdbcTemplate database) {
+    public AccountServiceDb(NamedParameterJdbcTemplate database) {
 
         this.database = database;
     }
@@ -116,7 +116,7 @@ public class AccountServiceDatabase implements AccountService {
     }
 
     @Override
-    public @NotNull Account updateAccountRating(@NotNull String login, int ratingDelta) {
+    public @NotNull Account updateAccountRating(@NotNull String login, int ratingDelta) throws DataRetrievalFailureException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
         source.addValue(LOGIN_PARAM, login);

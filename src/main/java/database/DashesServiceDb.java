@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Random;
 
 @Service
-public class DashServiceDatabase implements DashService {
+public class DashesServiceDb implements DashesService {
 
     private static final String LOGIN_PARAM = "plogin";
     private static final String ID_PARAM = "pid";
@@ -24,7 +24,7 @@ public class DashServiceDatabase implements DashService {
 
     private final NamedParameterJdbcTemplate database;
 
-    public DashServiceDatabase(NamedParameterJdbcTemplate database) {
+    public DashesServiceDb(NamedParameterJdbcTemplate database) {
         this.database = database;
     }
 
@@ -35,17 +35,16 @@ public class DashServiceDatabase implements DashService {
 
             return new Dashes(
                 resultSet.getInt("id"),
-                resultSet.getString("color"),
                 resultSet.getString("word"),
                 resultSet.getString("points"));
         }
     }
 
     @Override
-    public boolean checkWord(@NotNull String word, int id) {
+    public boolean checkWord(@NotNull String word, int dashesId) {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-        source.addValue(ID_PARAM, id);
+        source.addValue(ID_PARAM, dashesId);
         source.addValue(WORD_PARAM, word);
 
         final String checkWordSql = String.format(
@@ -57,10 +56,10 @@ public class DashServiceDatabase implements DashService {
     }
 
     @Override
-    public void addUsedDashes(@NotNull String login, int id) throws DataRetrievalFailureException {
+    public void addUsedDashes(@NotNull String login, int dashesId) throws DataRetrievalFailureException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
-        source.addValue(ID_PARAM, id);
+        source.addValue(ID_PARAM, dashesId);
         source.addValue(LOGIN_PARAM, login);
 
         final String insertDashesRecordText = String.format(
