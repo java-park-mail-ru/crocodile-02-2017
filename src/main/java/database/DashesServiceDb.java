@@ -48,7 +48,7 @@ public class DashesServiceDb implements DashesService {
         source.addValue(WORD_PARAM, word);
 
         final String checkWordSql = String.format(
-            " SELECT :%1$s = dashes.word FROM dashes" +
+            " SELECT lower( :%1$s ) = lower( dashes.word ) FROM dashes" +
                 " WHERE id = :%2$s",
             WORD_PARAM, ID_PARAM);
 
