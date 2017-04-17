@@ -1,6 +1,7 @@
 package database;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -41,7 +42,7 @@ public class DashesServiceDb implements DashesService {
     }
 
     @Override
-    public boolean checkWord(@NotNull String word, int dashesId) {
+    public boolean checkWord(@Nullable String word, int dashesId) {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
         source.addValue(ID_PARAM, dashesId);

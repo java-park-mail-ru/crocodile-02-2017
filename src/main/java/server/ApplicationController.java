@@ -2,7 +2,6 @@ package server;
 
 import database.*;
 import messagedata.AccountData;
-import messagedata.DashesData;
 import messagedata.ErrorCode;
 import messagedata.ErrorData;
 import org.slf4j.Logger;
@@ -20,7 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,8 +27,8 @@ import java.util.stream.Collectors;
     "http://localhost", "http://127.0.0.1"})
 public class ApplicationController {
 
-    public static final String SESSION_ATTR = "login";
-    public static final String GAME_ATTR = "pgameid";
+    public static final String SESSION_LOGIN_ATTR = "login";
+    public static final String SESSION_GAME_ATTR = "pgameid";
     public static final int SINGLE_GAME_TIME = 30;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
@@ -65,9 +63,9 @@ public class ApplicationController {
     @PostMapping(path = "/register/", consumes = "application/json", produces = "application/json")
     public ResponseEntity register(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(SESSION_ATTR) != null) {
+        if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(SESSION_ATTR));
+            LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
             return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -100,7 +98,7 @@ public class ApplicationController {
         try {
             final Account account = accountService.createAccount(body.getLogin(), body.getPassword(), body.getEmail());
             LOGGER.info("User #{}: {}, {} registered.", account.getId(), account.getLogin(), account.getEmail());
-            session.setAttribute(SESSION_ATTR, account.getLogin());
+            session.setAttribute(SESSION_LOGIN_ATTR, account.getLogin());
             return ResponseEntity.ok(new AccountData(account));
 
         } catch (DuplicateKeyException exception) {
@@ -116,9 +114,9 @@ public class ApplicationController {
     @PostMapping(path = "/login/", consumes = "application/json")
     public ResponseEntity login(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(SESSION_ATTR) != null) {
+        if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(SESSION_ATTR));
+            LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
             return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -137,7 +135,7 @@ public class ApplicationController {
         if ((account != null) && (account.passwordMatches(body.getPassword()))) {
 
             LOGGER.info("User #{} logged in.", account.getLogin());
-            session.setAttribute(SESSION_ATTR, account.getLogin());
+            session.setAttribute(SESSION_LOGIN_ATTR, account.getLogin());
             return ResponseEntity.ok("");
         }
 
@@ -150,7 +148,7 @@ public class ApplicationController {
     @PostMapping(path = "/change/", consumes = "application/json", produces = "application/json")
     public ResponseEntity changeAccount(@RequestBody AccountData body, HttpSession session) {
 
-        if (session.getAttribute(SESSION_ATTR) == null) {
+        if (session.getAttribute(SESSION_LOGIN_ATTR) == null) {
 
             LOGGER.debug("Unlogged user tried to change credentials.");
             return ResponseEntity
@@ -158,7 +156,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final String login = ( String ) session.getAttribute(SESSION_LOGIN_ATTR);
         Account account = accountService.findAccount(login);
 
         if (account == null) {
@@ -206,9 +204,9 @@ public class ApplicationController {
     @PostMapping(path = "/logout/")
     public ResponseEntity logout(HttpSession session) {
 
-        if (session.getAttribute(SESSION_ATTR) != null) {
+        if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.info("User #{} logged out.", session.getAttribute(SESSION_ATTR));
+            LOGGER.info("User #{} logged out.", session.getAttribute(SESSION_LOGIN_ATTR));
         }
 
         session.invalidate();
@@ -218,7 +216,7 @@ public class ApplicationController {
     @GetMapping(path = "/who-am-i/", produces = "application/json")
     public ResponseEntity getInfo(HttpSession session) {
 
-        if (session.getAttribute(SESSION_ATTR) == null) {
+        if (session.getAttribute(SESSION_LOGIN_ATTR) == null) {
 
             LOGGER.debug("Unlogged user tried to get his credentials.");
             return ResponseEntity
@@ -226,7 +224,7 @@ public class ApplicationController {
                 .body(new ErrorData(ErrorCode.LOG_IN, "You must be logged in to perform this operation."));
         }
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final String login = ( String ) session.getAttribute(SESSION_LOGIN_ATTR);
         final Account account = accountService.findAccount(login);
 
         if (account != null) {
@@ -251,13 +249,13 @@ public class ApplicationController {
     ///////////////////////////////////
     //Temp section
 
-    private synchronized boolean changeGameState(HttpSession session, int gameId, boolean shutdown) {
+    /*private synchronized boolean changeGameState(HttpSession session, int gameId, boolean shutdown) {
 
         if (shutdown && currentSingleGames.containsKey(gameId)) {
 
-            currentSingleGames.remove(gameId);
             singleGameService.shutdownGame(gameId);
-            session.removeAttribute(GAME_ATTR);
+            currentSingleGames.remove(gameId);
+            session.removeAttribute(SESSION_GAME_ATTR);
             return true;
         }
 
@@ -272,15 +270,15 @@ public class ApplicationController {
     @PostMapping(path = "/start-game/", produces = "application/json")
     public ResponseEntity startSingleGame(HttpSession session) {
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
+        final String login = (String) session.getAttribute(SESSION_LOGIN_ATTR);
         final Dashes dashes = dashesService.getRandomDash(login);
         LOGGER.info("Got dashes {}, {}", dashes.getId(), dashes.getWord());
 
         final SingleGame game = singleGameService.createGame(login, dashes.getId());
         currentSingleGames.put(game.getId(), game);
-        session.setAttribute(GAME_ATTR, game.getId());
+        session.setAttribute(SESSION_GAME_ATTR, game.getId());
 
-        scheduler.schedule(runDeletion(session, game.getId()), SINGLE_GAME_TIME, TimeUnit.SECONDS);
+        //scheduler.schedule(runDeletion(session, game.getId()), SINGLE_GAME_TIME, TimeUnit.SECONDS);
 
         return ResponseEntity.ok(new DashesData(dashes));
     }
@@ -288,8 +286,8 @@ public class ApplicationController {
     @PostMapping(path = "/check-answer/", produces = "application/json")
     public ResponseEntity checkAnswer(@RequestParam(value = "word") String word, HttpSession session) {
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
-        final int gameId = (int) session.getAttribute(GAME_ATTR);
+        final String login = (String) session.getAttribute(SESSION_LOGIN_ATTR);
+        final int gameId = (int) session.getAttribute(SESSION_GAME_ATTR);
         final SingleGame game = currentSingleGames.get(gameId);
 
         if ((game == null) || !game.getLogin().equals(login)) {
@@ -304,7 +302,7 @@ public class ApplicationController {
 
             dashesService.addUsedDashes(login, dashesId);
             accountService.updateAccountRating(login, 1);
-            session.removeAttribute(GAME_ATTR);
+            session.removeAttribute(SESSION_GAME_ATTR);
             return ResponseEntity.ok("{ \"correct\": true }");
         }
 
@@ -314,8 +312,8 @@ public class ApplicationController {
     @PostMapping(path = "/exit-game/", produces = "application/json")
     public ResponseEntity manualShutdown(HttpSession session) {
 
-        final String login = (String) session.getAttribute(SESSION_ATTR);
-        final int gameId = (int) session.getAttribute(GAME_ATTR);
+        final String login = (String) session.getAttribute(SESSION_LOGIN_ATTR);
+        final int gameId = (int) session.getAttribute(SESSION_GAME_ATTR);
         final SingleGame game = currentSingleGames.get(gameId);
 
         if ((game != null) && game.getLogin().equals(login)) {
@@ -324,5 +322,5 @@ public class ApplicationController {
         }
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("");
-    }
+    }*/
 }

@@ -73,7 +73,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/register/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
@@ -187,7 +187,7 @@ public class InterfaceTest {
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
             .andExpect(jsonPath(AccountData.RATING_ATTR).value(0))
-            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, data.getLogin()));
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_LOGIN_ATTR, data.getLogin()));
 
         assertAccountFields(accountService.findAccount(data.getLogin()),
             data.getLogin(), data.getPassword(), data.getEmail(), 0);
@@ -206,7 +206,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/login/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName2")
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
@@ -294,7 +294,7 @@ public class InterfaceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isOk())
-            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, data.getLogin()));
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_LOGIN_ATTR, data.getLogin()));
     }
 
     ///////////////////////////////////
@@ -320,7 +320,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName")
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "noSuchName")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isNotFound())
@@ -345,7 +345,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, login)
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isForbidden())
@@ -367,7 +367,7 @@ public class InterfaceTest {
         final String login = account.getLogin();
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, login)
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
@@ -390,7 +390,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, login)
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
@@ -410,7 +410,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin())
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isOk())
@@ -438,7 +438,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin())
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isOk())
@@ -466,7 +466,7 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/change/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin())
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(data)))
             .andExpect(status().isOk())
@@ -486,8 +486,8 @@ public class InterfaceTest {
 
         mvc
             .perform(post("/logout/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, "anyName"))
-            .andExpect(request().sessionAttribute(ApplicationController.SESSION_ATTR, ( Object ) null));
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "anyName"))
+            .andExpect(request().sessionAttribute(ApplicationController.SESSION_LOGIN_ATTR, ( Object ) null));
     }
 
     ///////////////////////////////////
@@ -507,7 +507,7 @@ public class InterfaceTest {
 
         mvc
             .perform(get("/who-am-i/")
-                .sessionAttr(ApplicationController.SESSION_ATTR, "noSuchName"))
+                .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "noSuchName"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }
@@ -521,7 +521,7 @@ public class InterfaceTest {
             CORRECT_EMAIL);
 
         mvc
-            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_ATTR, account.getLogin()))
+            .perform(get("/who-am-i/").sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin()))
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(account.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(account.getEmail()))

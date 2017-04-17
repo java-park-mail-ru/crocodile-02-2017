@@ -11,14 +11,22 @@ import java.io.IOException;
 @SuppressWarnings("unused")
 public class DashesData {
 
+    public static final String GAME_ID_ATTR = "gameid";
     public static final String POINTS_ATTR = "points";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private final int gameId;
     private final Dashes dashes;
 
-    public DashesData(@NotNull Dashes dashes) {
+    public DashesData(int gameId, @NotNull Dashes dashes) {
+        this.gameId = gameId;
         this.dashes = dashes;
+    }
+
+    @JsonProperty(GAME_ID_ATTR)
+    public int getGameId() {
+        return gameId;
     }
 
     @SuppressWarnings("OverlyBroadThrowsClause")
