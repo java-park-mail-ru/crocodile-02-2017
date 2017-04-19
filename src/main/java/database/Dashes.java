@@ -6,16 +6,16 @@ public class Dashes {
 
     private final int id;
     private final @NotNull String word;
-    private final @NotNull String points;
+    private final @NotNull String pointsJson;
 
     public Dashes(
         int id,
         @NotNull String word,
-        @NotNull String points) {
+        @NotNull String pointsJson) {
 
         this.id = id;
         this.word = word;
-        this.points = points;
+        this.pointsJson = pointsJson;
     }
 
     public int getId() {
@@ -27,6 +27,6 @@ public class Dashes {
     }
 
     public @NotNull String getPointsJson() {
-        return points;
+        return pointsJson;
     }
 }

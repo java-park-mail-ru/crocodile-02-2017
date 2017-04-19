@@ -9,9 +9,9 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 
 @SuppressWarnings("unused")
-public class DashesData {
+public class SingleplayerGameData {
 
-    public static final String GAME_ID_ATTR = "gameid";
+    public static final String GAME_ID_ATTR = "gameId";
     public static final String POINTS_ATTR = "points";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -19,7 +19,7 @@ public class DashesData {
     private final int gameId;
     private final Dashes dashes;
 
-    public DashesData(int gameId, @NotNull Dashes dashes) {
+    public SingleplayerGameData(int gameId, @NotNull Dashes dashes) {
         this.gameId = gameId;
         this.dashes = dashes;
     }

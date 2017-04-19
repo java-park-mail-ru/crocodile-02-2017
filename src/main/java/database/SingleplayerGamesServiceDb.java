@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 @Service
-public class SingleGameServiceDb implements SingleGameService {
+public class SingleplayerGamesServiceDb implements SingleplayerGamesService {
 
     private static final String ID_ATTR = "pid";
     private static final String LOGIN_ATTR = "plogin";
@@ -24,16 +24,16 @@ public class SingleGameServiceDb implements SingleGameService {
 
     private final NamedParameterJdbcTemplate database;
 
-    public SingleGameServiceDb(NamedParameterJdbcTemplate database) {
+    public SingleplayerGamesServiceDb(NamedParameterJdbcTemplate database) {
         this.database = database;
     }
 
-    private static class SingleGameRowMapper implements RowMapper<SingleGame> {
+    private static class SingleGameRowMapper implements RowMapper<SingleplayerGame> {
 
         @Override
-        public SingleGame mapRow(ResultSet resultSet, int i) throws SQLException {
+        public SingleplayerGame mapRow(ResultSet resultSet, int i) throws SQLException {
 
-            return new SingleGame(
+            return new SingleplayerGame(
                 resultSet.getInt("id"),
                 resultSet.getString("login"),
                 resultSet.getInt("dashesid"),
@@ -42,7 +42,7 @@ public class SingleGameServiceDb implements SingleGameService {
     }
 
     @Override
-    public @NotNull SingleGame createGame(@NotNull String login, int dashesId) throws DataRetrievalFailureException {
+    public @NotNull SingleplayerGame createGame(@NotNull String login, int dashesId) throws DataRetrievalFailureException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
         source.addValue(LOGIN_ATTR, login);
@@ -59,7 +59,7 @@ public class SingleGameServiceDb implements SingleGameService {
                 " JOIN dashes ON dashes.id = dashesid",
             DASHES_ID_ATTR, LOGIN_ATTR);
 
-        final List<SingleGame> result = database.query(createGameSql, source, SINGLE_GAME_MAPPER);
+        final List<SingleplayerGame> result = database.query(createGameSql, source, SINGLE_GAME_MAPPER);
         if (result.size() != 1) {
             throw new DataRetrievalFailureException("Single game creation error");
         }
@@ -67,7 +67,7 @@ public class SingleGameServiceDb implements SingleGameService {
     }
 
     @Override
-    public @Nullable SingleGame getGame(int gameId) throws DataAccessException {
+    public @Nullable SingleplayerGame getGame(int gameId) throws DataAccessException {
 
         final MapSqlParameterSource source = new MapSqlParameterSource();
         source.addValue(ID_ATTR, gameId);
@@ -79,7 +79,7 @@ public class SingleGameServiceDb implements SingleGameService {
                 " WHERE single_game.id = :%1$s",
             ID_ATTR);
 
-        final List<SingleGame> result = database.query(selectGameSql, source, SINGLE_GAME_MAPPER);
+        final List<SingleplayerGame> result = database.query(selectGameSql, source, SINGLE_GAME_MAPPER);
         return (result.size() == 1) ? result.get(0) : null;
     }
 

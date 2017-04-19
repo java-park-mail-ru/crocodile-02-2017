@@ -2,7 +2,7 @@ package server;
 
 import database.AccountServiceDb;
 import database.DashesServiceDb;
-import database.SingleGameServiceDb;
+import database.SingleplayerGamesServiceDb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,8 +31,8 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public SingleGameServiceDb singleGameService(NamedParameterJdbcTemplate database) {
-        return new SingleGameServiceDb(database);
+    public SingleplayerGamesServiceDb singleGameService(NamedParameterJdbcTemplate database) {
+        return new SingleplayerGamesServiceDb(database);
     }
 
 }

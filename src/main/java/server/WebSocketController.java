@@ -1,112 +1,68 @@
 package server;
 
-import database.*;
+import database.Dashes;
+import database.DashesServiceDb;
 import messagedata.AnswerData;
-import messagedata.DashesData;
+import messagedata.SingleplayerGameData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
+@SuppressWarnings("unused")
 @Controller
 public class WebSocketController {
 
-    public static final String SESSION_GAME_ATTR = "pgameid";
-    public static final int SINGLE_GAME_TIME = 30;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
-    private final AccountServiceDb accountService;
+    private final GameManagerService gameManagerService;
     private final DashesServiceDb dashesService;
-    private final SingleGameServiceDb singleGameService;
-
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final HashMap<Integer, SingleGame> currentSingleGames = new HashMap<>();
 
     @Autowired
     public WebSocketController(
-        AccountServiceDb accountService,
-        DashesServiceDb dashesService,
-        SingleGameServiceDb singleGameService) {
+        GameManagerService gameManagerService,
+        DashesServiceDb dashesService) {
 
-        this.accountService = accountService;
+        this.gameManagerService = gameManagerService;
         this.dashesService = dashesService;
-        this.singleGameService = singleGameService;
-    }
-
-    private synchronized boolean changeGameState(WebSocketSession session, int gameId, boolean shutdown) {
-
-        if (shutdown && currentSingleGames.containsKey(gameId)) {
-
-            singleGameService.shutdownGame(gameId);
-            currentSingleGames.remove(gameId);
-
-            try {
-                session.close();
-
-            } catch ( IOException exception ) {
-
-                LOGGER.error("Couldn't close websocket session {}.", session.getId());
-            }
-
-            return true;
-        }
-        return false;
-    }
-
-    private Runnable runDeletion(WebSocketSession session, int gameId) {
-
-        return () -> changeGameState(session, gameId, true);
     }
 
     @SubscribeMapping("/sp-create/")
-    public DashesData createSingleplayerGame(WebSocketSession session) {
+    public SingleplayerGameData createSingleplayerGame(SimpMessageHeaderAccessor session) {
 
-        final String login = ( String ) session.getAttributes().get(ApplicationController.SESSION_LOGIN_ATTR);
+        session.getSessionAttributes().put(ApplicationController.SESSION_LOGIN_ATTR, "bop1");
+
+        final String login = (String) session.getSessionAttributes().get(ApplicationController.SESSION_LOGIN_ATTR);
         final Dashes dashes = dashesService.getRandomDash(login);
+        LOGGER.info("Got dashes {}, {}", dashes.getId(), dashes.getWord());
 
-        final SingleGame game = singleGameService.createGame(login, dashes.getId());
-        currentSingleGames.put(game.getId(), game);
-        session.getAttributes().put(SESSION_GAME_ATTR, game.getId());
+        final int gameId = gameManagerService.scheduleSingleplayerGameStart(login, dashes.getId());
 
-        scheduler.schedule(runDeletion(session, game.getId()), SINGLE_GAME_TIME, TimeUnit.SECONDS);
-
-        return new DashesData(game.getId(), dashes);
+        return new SingleplayerGameData(gameId, dashes);
     }
 
-    @SendTo("/sp-game/{gameId}")
-    @MessageMapping("/sp-game/{gameId}")
-    public String answerSinglePlayerGame(@DestinationVariable int gameId, AnswerData answer, WebSocketSession session) {
+    @SubscribeMapping("/sp-game/{gameId}")
+    public void startSingleplayerGame(SimpMessageHeaderAccessor session) {
 
-        final String login = ( String ) session.getAttributes().get(ApplicationController.SESSION_LOGIN_ATTR);
-        final SingleGame game = currentSingleGames.get(gameId);
+        System.out.println("Started game!");
+        final String login = (String) session.getSessionAttributes().get(ApplicationController.SESSION_LOGIN_ATTR);
+        gameManagerService.startSingleplayerGame(login);
+    }
 
-        if ((game == null) || !game.getLogin().equals(login)) {
+    @SendTo("/ws/sp-game/{gameId}")
+    @MessageMapping("/sp-answer/{gameId}")
+    public String answerSingleplayerGame(@DestinationVariable int gameId, AnswerData answer) {
 
-            return "{ \"correct\": false }";
-        }
+        final boolean answerCorrect = gameManagerService.checkSingleplayerAnswer(gameId, answer.getWord());
 
-        final int dashesId = game.getDashesId();
-        final boolean isCorrect = dashesService.checkWord(answer.getWord(), dashesId);
+        System.out.println(answerCorrect);
+        System.out.println("/ws/sp-game/" + gameId);
 
-        if (changeGameState(session, gameId, isCorrect)) {
-
-            dashesService.addUsedDashes(login, dashesId);
-            accountService.updateAccountRating(login, 1);
-            return "{ \"correct\": true }";
-        }
-
-        return "{ \"correct\": false }";
+        return answerCorrect ? "{ \"correct\": true }" : "{ \"correct\": false }";
     }
 }

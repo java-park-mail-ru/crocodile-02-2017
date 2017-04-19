@@ -11,17 +11,19 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
 @EnableWebSocketMessageBroker
 public class WebSocketConfiguration extends AbstractWebSocketMessageBrokerConfigurer {
 
+    //todo add approved origins
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
 
-        registry.enableSimpleBroker("/sp-game");
+        registry.enableSimpleBroker("/sp-game", "/sp-create", "/ws/sp-game");
         registry.setApplicationDestinationPrefixes("/ws");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry stompEndpointRegistry) {
 
-        stompEndpointRegistry.addEndpoint("/sp-create/")
+        stompEndpointRegistry.addEndpoint("/sp-games/")
             .addInterceptors(new HttpSessionHandshakeInterceptor())
             .withSockJS();
     }

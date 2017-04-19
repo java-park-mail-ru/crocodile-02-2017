@@ -1,15 +1,16 @@
 package database;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class SingleGame {
+public class SingleplayerGame {
 
     private final int id;
     private final @NotNull String login;
     private final int dashesId;
     private final @NotNull String word;
 
-    public SingleGame(
+    public SingleplayerGame(
         int id,
         @NotNull String login,
         int dashesId,
@@ -35,5 +36,11 @@ public class SingleGame {
 
     public @NotNull String getWord() {
         return word;
+    }
+
+    public boolean isCorrectAnswer(@Nullable String answer) {
+
+        return (answer != null) &&
+            this.word.toLowerCase().equals(answer.toLowerCase());
     }
 }
