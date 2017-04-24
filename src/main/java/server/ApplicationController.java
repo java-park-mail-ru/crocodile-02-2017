@@ -1,13 +1,11 @@
 package server;
 
-import database.Account;
+import database.AccountService;
 import database.AccountServiceDb;
-import database.Dashes;
-import database.DashesServiceDb;
-import messagedata.AccountData;
-import messagedata.ErrorCode;
-import messagedata.ErrorData;
-import messagedata.SingleplayerGameData;
+import entities.Account;
+import httpmessages.AccountData;
+import httpmessages.ErrorCode;
+import httpmessages.ErrorData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,19 +30,13 @@ public class ApplicationController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
-    private final AccountServiceDb accountService;
-    private final DashesServiceDb dashesService;
-    private final GameManagerService gameManagerService;
+    private final AccountService accountService;
 
     @Autowired
     public ApplicationController(
-        AccountServiceDb accountService,
-        DashesServiceDb dashesService,
-        GameManagerService gameManagerService) {
+        AccountServiceDb accountService) {
 
         this.accountService = accountService;
-        this.dashesService = dashesService;
-        this.gameManagerService = gameManagerService;
     }
 
     @ExceptionHandler(DataAccessException.class)
@@ -240,16 +232,5 @@ public class ApplicationController {
         return ResponseEntity.ok(accountService
             .getBest().stream().map(AccountData::new)
             .collect(Collectors.toCollection(LinkedHashSet::new)));
-    }
-
-    @PostMapping(path = "/sp-game/")
-    public ResponseEntity startSingleGame(HttpSession session) {
-
-        final String login = (String) session.getAttribute(SESSION_LOGIN_ATTR);
-        final Dashes dashes = dashesService.getRandomDash(login);
-        LOGGER.info("Got dashes {}, {}", dashes.getId(), dashes.getWord());
-
-        final int gameId = gameManagerService.scheduleSingleplayerGameStart(login, dashes.getId());
-        return ResponseEntity.ok(new SingleplayerGameData(gameId, dashes));
     }
 }

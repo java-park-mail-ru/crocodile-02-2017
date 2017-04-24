@@ -1,5 +1,6 @@
 package database;
 
+import entities.Dashes;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataRetrievalFailureException;
@@ -71,7 +72,7 @@ public class DashesServiceDb implements DashesService {
 
         final int insertsCount = database.update(insertDashesRecordText, source);
         if (insertsCount != 1) {
-            throw new DataRetrievalFailureException("Used words insertion error");
+            throw new DataRetrievalFailureException("used words insertion error");
         }
     }
 
@@ -94,8 +95,9 @@ public class DashesServiceDb implements DashesService {
 
         final List<Dashes> result = database.query(selectDashSql, source, DASH_MAPPER);
         if (result.isEmpty()) {
-            throw new DataRetrievalFailureException("Dashes retrieval error");
+            throw new DataRetrievalFailureException("dashes retrieval error");
         }
+
         return result.get(RANDOM.nextInt(result.size()));
     }
 

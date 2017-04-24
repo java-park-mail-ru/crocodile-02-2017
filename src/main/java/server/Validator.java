@@ -1,6 +1,6 @@
 package server;
 
-import messagedata.AccountData;
+import httpmessages.AccountData;
 
 import java.util.regex.Pattern;
 

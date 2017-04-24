@@ -1,30 +1,33 @@
 package server;
 
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 @Configuration
-@EnableWebSocketMessageBroker
-public class WebSocketConfiguration extends AbstractWebSocketMessageBrokerConfigurer {
+@EnableWebSocket
+public class WebSocketConfiguration implements WebSocketConfigurer {
 
     //todo add approved origins
 
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
+    private final @NotNull WebSocketHandler webSocketHandler;
 
-        registry.enableSimpleBroker("/sp-game", "/sp-create", "/ws/sp-game");
-        registry.setApplicationDestinationPrefixes("/ws");
+    @Autowired
+    public WebSocketConfiguration(@NotNull WebSocketHandler webSocketHandler) {
+
+        this.webSocketHandler = webSocketHandler;
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry stompEndpointRegistry) {
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
-        stompEndpointRegistry.addEndpoint("/sp-games/")
+        registry.addHandler(webSocketHandler, "/sp-games/")
             .addInterceptors(new HttpSessionHandshakeInterceptor())
-            .withSockJS();
+            .setAllowedOrigins("*");
     }
 }

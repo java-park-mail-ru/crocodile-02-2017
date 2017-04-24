@@ -8,8 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.handler.PerConnectionWebSocketHandler;
+import websocket.GameManagerService;
+import websocket.GameSocketHandler;
+import websocket.WebSocketMessageHandler;
 
-@SuppressWarnings({"SpringJavaAutowiringInspection", "SpringFacetCodeInspection"})
+
+@SuppressWarnings("SpringJavaAutowiringInspection")
 @Configuration
 public class ApplicationConfiguration {
 
@@ -33,6 +39,21 @@ public class ApplicationConfiguration {
     @Bean
     public SingleplayerGamesServiceDb singleGameService(NamedParameterJdbcTemplate database) {
         return new SingleplayerGamesServiceDb(database);
+    }
+
+    @Bean
+    public WebSocketMessageHandler webSocketMessageHandler() {
+        return new WebSocketMessageHandler();
+    }
+
+    @Bean
+    public GameManagerService gameManagerService(AccountServiceDb accountServiceDb, SingleplayerGamesServiceDb singleplayerGamesService) {
+        return new GameManagerService(accountServiceDb, singleplayerGamesService);
+    }
+
+    @Bean
+    public WebSocketHandler gameWebSocketHandler() {
+        return new PerConnectionWebSocketHandler(GameSocketHandler.class);
     }
 
 }

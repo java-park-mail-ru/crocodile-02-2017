@@ -1,5 +1,6 @@
 package database;
 
+import entities.Dashes;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.dao.DataAccessException;
 

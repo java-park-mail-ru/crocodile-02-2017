@@ -1,5 +1,6 @@
 package database;
 
+import entities.Account;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataRetrievalFailureException;
@@ -65,7 +66,7 @@ public class AccountServiceDb implements AccountService {
 
         final List<Account> result = database.query(insertAccountSql, source, ACCOUNT_MAPPER);
         if (result.size() != 1) {
-            throw new DataRetrievalFailureException("Account creation error");
+            throw new DataRetrievalFailureException("account creation error");
         }
         return result.get(0);
     }
@@ -110,7 +111,7 @@ public class AccountServiceDb implements AccountService {
 
         final List<Account> result = database.query(updateAccountSql, source, ACCOUNT_MAPPER);
         if (result.size() != 1) {
-            throw new DataRetrievalFailureException("Account update error");
+            throw new DataRetrievalFailureException("account update error");
         }
         return result.get(0);
     }
@@ -131,7 +132,7 @@ public class AccountServiceDb implements AccountService {
 
         final List<Account> result = database.query(updateAccountSql, source, ACCOUNT_MAPPER);
         if (result.size() != 1) {
-            throw new DataRetrievalFailureException("Account update error");
+            throw new DataRetrievalFailureException("account update error");
         }
         return result.get(0);
     }

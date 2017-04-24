@@ -1,5 +1,6 @@
 package database;
 
+import entities.Account;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataAccessException;

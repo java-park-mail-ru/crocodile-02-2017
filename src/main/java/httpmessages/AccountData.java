@@ -1,14 +1,13 @@
-package messagedata;
+package httpmessages;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import database.Account;
+import com.fasterxml.jackson.annotation.*;
+import entities.Account;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class AccountData {
 
     public static final String LOGIN_ATTR = "login";

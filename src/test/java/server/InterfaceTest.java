@@ -1,12 +1,12 @@
 package server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import database.Account;
 import database.AccountService;
 import database.AccountServiceDb;
-import messagedata.AccountData;
-import messagedata.ErrorCode;
-import messagedata.ErrorData;
+import entities.Account;
+import httpmessages.AccountData;
+import httpmessages.ErrorCode;
+import httpmessages.ErrorData;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;

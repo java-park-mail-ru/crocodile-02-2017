@@ -1,5 +1,6 @@
 package database;
 
+import entities.SingleplayerGame;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
@@ -48,6 +49,8 @@ public class SingleplayerGamesServiceDb implements SingleplayerGamesService {
         source.addValue(LOGIN_ATTR, login);
         source.addValue(DASHES_ID_ATTR, dashesId);
 
+        //todo on conflict replace
+
         final String createGameSql = String.format(
             " With tempIns AS ( INSERT INTO single_game" +
                 " ( accountid, dashesid )" +
@@ -61,7 +64,7 @@ public class SingleplayerGamesServiceDb implements SingleplayerGamesService {
 
         final List<SingleplayerGame> result = database.query(createGameSql, source, SINGLE_GAME_MAPPER);
         if (result.size() != 1) {
-            throw new DataRetrievalFailureException("Single game creation error");
+            throw new DataRetrievalFailureException("single game creation error");
         }
         return result.get(0);
     }
@@ -96,7 +99,7 @@ public class SingleplayerGamesServiceDb implements SingleplayerGamesService {
 
         final int deletedCount = database.update(deleteGameSql, source);
         if (deletedCount == 0) {
-            throw new DataRetrievalFailureException("Single game shutdown error");
+            throw new DataRetrievalFailureException("single game shutdown error");
         }
     }
 }
