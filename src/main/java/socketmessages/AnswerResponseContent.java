@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AnswerResponseContent extends EmptyContent {
 
-    public static final String CORRECT_ATTR = "correct";
+    public static final String CORRECT_ATTR = "right";
 
     private final boolean correct;
 

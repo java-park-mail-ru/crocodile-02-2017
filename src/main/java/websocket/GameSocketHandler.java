@@ -9,14 +9,12 @@ import database.DashesService;
 import database.DashesServiceDb;
 import entities.Dashes;
 import entities.SingleplayerGame;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import server.ApplicationController;
 import socketmessages.*;
 
 import javax.naming.AuthenticationException;
@@ -25,7 +23,7 @@ import java.io.IOException;
 @SuppressWarnings("OverlyBroadCatchBlock")
 public class GameSocketHandler extends TextWebSocketHandler {
 
-    public static final String SESSSION_LOGIN_ATTR = ApplicationController.SESSION_LOGIN_ATTR;
+
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Logger LOGGER = LoggerFactory.getLogger(GameSocketHandler.class);
@@ -58,8 +56,8 @@ public class GameSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws AuthenticationException, JsonProcessingException {
 
-        session.getAttributes().put(SESSSION_LOGIN_ATTR, "bop1");
-        final String login = getLoginFromSession(session);
+        session.getAttributes().put("login", "bop1");
+        final String login = SessionOperator.getLogin(session);
 
         if (login == null || accountService.findAccount(login) == null) {
 
@@ -68,6 +66,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
 
         LOGGER.info("Got websocket connection from user {}.", login);
+        gameManagerService.clearUserGame(login);
     }
 
     @Override
@@ -77,7 +76,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
             final WebSocketMessage message = readMessage(textMessage, EmptyContent.class);
 
             LOGGER.info("Got websocket message type {} from user {}.",
-                message.getTypeString(), getLoginFromSession(session));
+                message.getTypeString(), SessionOperator.getLogin(session));
 
             webSocketMessageHandler.handle(session, textMessage, message.getTypeEnum());
 
@@ -92,7 +91,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 
         LOGGER.info("Websocket connection with user {} closed with reason {}.",
-            getLoginFromSession(session),
+            SessionOperator.getLogin(session),
             status.getReason());
         super.afterConnectionClosed(session, status);
     }
@@ -100,7 +99,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
     @SuppressWarnings("OverlyBroadCatchBlock")
     private void handleStartSinglePlayerGame(WebSocketSession session) throws Exception {
 
-        final String login = getLoginFromSession(session);
+        final String login = SessionOperator.getLogin(session);
         assert login != null;
         final Dashes dashes = dashesService.getRandomDash(login);
         LOGGER.info("Got dashes #{}, {} for {}", dashes.getId(), dashes.getWord(), login);
@@ -111,51 +110,27 @@ public class GameSocketHandler extends TextWebSocketHandler {
         final WebSocketMessage data = new WebSocketMessage<>(
             MessageType.STATE.toString(),
             new SingleplayerGameStateContent(dashes, timePassed, GameManagerService.SINGLEPLAYER_TIME_LIMIT));
-        sendMessage(session, data);
+        SessionOperator.sendMessage(session, data);
     }
 
     @SuppressWarnings("OverlyBroadCatchBlock")
     private void handleCheckAnswer(WebSocketSession session, TextMessage textMessage) throws Exception {
 
-        final String login = getLoginFromSession(session);
+        final String login = SessionOperator.getLogin(session);
         assert login != null;
 
         final AnswerContent answerContent = (AnswerContent) readMessage(textMessage, AnswerContent.class).getContent();
         LOGGER.info("Got answer {} from user {}", answerContent.getWord(), login);
 
         gameManagerService.checkAnswer(login, answerContent.getWord());
-
-        /*if ( answerCorrect == null ) {
-
-            LOGGER.warn( "Recieved answer from user {} that is not playing.", login);
-
-        }
-
-        if ( answerCorrect ) {
-
-
-        }
-
-        final WebSocketMessage data = new WebSocketMessage<>(
-            MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent( answerCorrect ) );
-        sendMessage( session, data );*/
     }
 
-    @SuppressWarnings("OverlyBroadCatchBlock")
-    private void sendMessage(WebSocketSession session, Object data) {
+    private void handleGetSate(WebSocketSession session) throws Exception {
 
-        try {
-            session.sendMessage(new TextMessage(OBJECT_MAPPER.writeValueAsString(data)));
+        final String login = SessionOperator.getLogin(session);
+        assert login != null;
 
-        } catch (IOException exception) {
-
-            LOGGER.error("Can't send websocket message to {}.", getLoginFromSession(session));
-        }
-    }
-
-    private @Nullable String getLoginFromSession(WebSocketSession session) {
-
-        return (String) session.getAttributes().get(SESSSION_LOGIN_ATTR);
+        gameManagerService.sendGameState(login);
     }
 
     private WebSocketMessage<?> readMessage(TextMessage textMessage, Class contentClass) throws IOException {
