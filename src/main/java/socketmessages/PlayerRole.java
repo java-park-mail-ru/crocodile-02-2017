@@ -9,7 +9,7 @@ public enum PlayerRole {
     @Override
     public String toString() {
 
-        if (this == GUESSER) {
+        if (this == PAINTER) {
 
             return "main";
         }

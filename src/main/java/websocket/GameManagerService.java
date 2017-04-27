@@ -130,6 +130,8 @@ public class GameManagerService {
         private long timeLeftMillis;
         private ScheduledFuture<?> repeatTask;
 
+        private ArrayList<PicturePointContent> points = new ArrayList<>();
+
         ScheduledGame(BasicGame game, GameType type) {
 
             this.game = game;
@@ -139,6 +141,14 @@ public class GameManagerService {
 
         public GameType getType() {
             return type;
+        }
+
+        public void addPoint(PicturePointContent point) {
+            points.add(point);
+        }
+
+        public ArrayList<PicturePointContent> getPoints() {
+            return points;
         }
 
         void rechedule(Runnable task, int delaySeconds) {
@@ -264,8 +274,6 @@ public class GameManagerService {
     public SingleplayerGame createSingleplayerGame(WebSocketSession session) {
 
         final String login = SessionOperator.getLogin(session);
-        assert login != null;
-
         final Dashes dashes = dashesService.getRandomDash(login);
 
         LOGGER.info("Got dashes #{}, {} for {}", dashes.getId(), dashes.getWord(), login);
@@ -281,7 +289,7 @@ public class GameManagerService {
     }
 
     @SuppressWarnings({"Convert2MethodRef", "InfiniteLoopStatement"})
-    private void checkQueue() {
+    private void checkQueue() throws IOException {
 
         final ArrayList<String> possiblePainters = new ArrayList<>();
         possiblePainters.addAll(
@@ -306,16 +314,15 @@ public class GameManagerService {
 
                 final ArrayList<String> guessers = new ArrayList<>();
                 guessers.addAll(possibleGuessers.subList(0, Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_PLAYERS_LIMIT)));
-                createMultiplayerGame(painter, guessers);
+                final MultiplayerGame game = createMultiplayerGame(painter, guessers);
+                startTimer(game.getId(), GameType.MULTIPLAYER);
             }
         }
     }
 
-    public void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) {
+    public void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) throws IOException {
 
         final String login = SessionOperator.getLogin(session);
-        assert login != null;
-
         queuedPlayers.put(login, new QueueRelation(role, session));
         checkQueue();
     }
@@ -356,10 +363,32 @@ public class GameManagerService {
     }
 
     //todo throws error if not exists
+    public void addPoint(WebSocketSession session, PicturePointContent point) {
+
+        final String login = SessionOperator.getLogin(session);
+
+        final ScheduledGame scheduledGame = getUserScheduledGame(login);
+
+        if ((scheduledGame == null) || (scheduledGame.getType() == GameType.SINGLEPLAYER)) {
+            return;
+        }
+
+        final ArrayList<WebSocketSession> recieverSessions = getGameSessions(scheduledGame.getGame().getId(), GameType.MULTIPLAYER);
+        recieverSessions.removeIf(e -> SessionOperator.getLogin(e).equals(login));
+        scheduledGame.addPoint(point);
+        recieverSessions.forEach(
+            (WebSocketSession reciever) ->
+                SessionOperator.sendMessage(
+                    reciever,
+                    new WebSocketMessage<>(
+                        MessageType.NEW_POINT.toString(),
+                        point)));
+    }
+
+    //todo throws error if not exists
     public void sendGameState(WebSocketSession session) throws IOException {
 
         final String login = SessionOperator.getLogin(session);
-        assert login != null;
 
         final ScheduledGame scheduledGame = getUserScheduledGame(login);
 
@@ -385,13 +414,11 @@ public class GameManagerService {
                 getLoseTask(scheduledGame),
                 getFinishTime(gameType));
 
-
             final ArrayList<WebSocketSession> playerSessions = getGameSessions(gameId, gameType);
 
             for (WebSocketSession session : playerSessions) {
 
                 final String login = SessionOperator.getLogin(session);
-                assert login != null;
 
                 final WebSocketMessage<BaseGameContent> gameState = getGameState(scheduledGame, login);
                 SessionOperator.sendMessage(session, gameState);
@@ -403,8 +430,9 @@ public class GameManagerService {
         return 0;
     }
 
-    public synchronized void checkAnswer(String login, @Nullable String word) throws Exception {
+    public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) throws Exception {
 
+        final String login = SessionOperator.getLogin(session);
         final ScheduledGame scheduledGame = getUserScheduledGame(login);
 
         if (scheduledGame == null) {

@@ -1,7 +1,7 @@
 package websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.TextMessage;
@@ -21,9 +21,11 @@ public final class SessionOperator {
     private SessionOperator() {
     }
 
-    public static @Nullable String getLogin(WebSocketSession session) {
+    public static @NotNull String getLogin(WebSocketSession session) {
 
-        return (String) session.getAttributes().get(SESSION_LOGIN_ATTR);
+        final String login = (String) session.getAttributes().get(SESSION_LOGIN_ATTR);
+
+        return (login != null) ? login : "";
     }
 
     @SuppressWarnings("OverlyBroadCatchBlock")
