@@ -12,9 +12,7 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
 @Configuration
 @EnableWebSocket
 public class WebSocketConfiguration implements WebSocketConfigurer {
-
-    //todo add approved origins
-
+    
     private final @NotNull WebSocketHandler webSocketHandler;
 
     @Autowired
@@ -28,6 +26,9 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
 
         registry.addHandler(webSocketHandler, "/sp-games/")
             .addInterceptors(new HttpSessionHandshakeInterceptor())
-            .setAllowedOrigins("*");
+            .setAllowedOrigins("http://vstaem.herokuapp.com", "https://vstaem.herokuapp.com", "http://vstaem-dev.herokuapp.com", "https://vstaem-dev.herokuapp.com",
+                "http://localhost", "http://127.0.0.1");
     }
+
+
 }
