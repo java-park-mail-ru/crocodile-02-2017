@@ -26,6 +26,7 @@ public final class SessionOperator {
         return (String) session.getAttributes().get(SESSION_LOGIN_ATTR);
     }
 
+    @SuppressWarnings("OverlyBroadCatchBlock")
     public static void sendMessage(WebSocketSession session, WebSocketMessage message) {
 
         try {

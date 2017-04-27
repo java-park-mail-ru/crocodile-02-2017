@@ -2,6 +2,7 @@ package server;
 
 import database.AccountServiceDb;
 import database.DashesServiceDb;
+import database.MultiplayerGamesServiceDb;
 import database.SingleplayerGamesServiceDb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +14,6 @@ import org.springframework.web.socket.handler.PerConnectionWebSocketHandler;
 import websocket.GameManagerService;
 import websocket.GameSocketHandler;
 import websocket.WebSocketMessageHandler;
-
 
 @SuppressWarnings("SpringJavaAutowiringInspection")
 @Configuration
@@ -42,13 +42,18 @@ public class ApplicationConfiguration {
     }
 
     @Bean
+    public MultiplayerGamesServiceDb multiplayerGamesService(NamedParameterJdbcTemplate database) {
+        return new MultiplayerGamesServiceDb(database);
+    }
+
+    @Bean
     public WebSocketMessageHandler webSocketMessageHandler() {
         return new WebSocketMessageHandler();
     }
 
     @Bean
-    public GameManagerService gameManagerService(AccountServiceDb accountServiceDb, SingleplayerGamesServiceDb singleplayerGamesService) {
-        return new GameManagerService(accountServiceDb, singleplayerGamesService);
+    public GameManagerService gameManagerService(AccountServiceDb accountServiceDb, DashesServiceDb dashesService, SingleplayerGamesServiceDb singleplayerGamesService, MultiplayerGamesServiceDb multiplayerGamesService) {
+        return new GameManagerService(accountServiceDb, dashesService, singleplayerGamesService, multiplayerGamesService);
     }
 
     @Bean

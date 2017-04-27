@@ -1,8 +1,11 @@
 package socketmessages;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BaseGameContent extends EmptyContent {
 
     public static final String TYPE_ATTR = "type";
@@ -15,7 +18,6 @@ public class BaseGameContent extends EmptyContent {
 
     public BaseGameContent(@NotNull GameType gameType, float timePassed, float timeLimit) {
 
-        //super(type);
         this.gameType = gameType;
         this.timePassed = timePassed;
         this.timeLimit = timeLimit;

@@ -5,12 +5,10 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import database.AccountService;
 import database.AccountServiceDb;
-import database.DashesService;
-import database.DashesServiceDb;
-import entities.Dashes;
 import entities.SingleplayerGame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -20,43 +18,44 @@ import socketmessages.*;
 import javax.naming.AuthenticationException;
 import java.io.IOException;
 
-@SuppressWarnings("OverlyBroadCatchBlock")
 public class GameSocketHandler extends TextWebSocketHandler {
-
-
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Logger LOGGER = LoggerFactory.getLogger(GameSocketHandler.class);
 
     private final GameManagerService gameManagerService;
-    private final DashesService dashesService;
     private final AccountService accountService;
     private final WebSocketMessageHandler webSocketMessageHandler;
 
     public GameSocketHandler(
         GameManagerService gameManagerService,
-        DashesServiceDb dashesService,
         AccountServiceDb accountService,
         WebSocketMessageHandler webSocketMessageHandler) {
 
         this.gameManagerService = gameManagerService;
-        this.dashesService = dashesService;
         this.accountService = accountService;
         this.webSocketMessageHandler = webSocketMessageHandler;
 
         webSocketMessageHandler.setHandler(
             MessageType.START_SINGLEPLAYER_GAME,
-            (WebSocketSession s, TextMessage m) -> handleStartSinglePlayerGame(s));
+            (WebSocketSession s, TextMessage m) -> handleStartSingleplayerGame(s));
+
+        webSocketMessageHandler.setHandler(
+            MessageType.START_MULTIPLAYER_GAME,
+            (WebSocketSession s, TextMessage m) -> handleStartMultiplayerGame(s));
 
         webSocketMessageHandler.setHandler(
             MessageType.CHECK_ANSWER,
             this::handleCheckAnswer);
+
+        webSocketMessageHandler.setHandler(
+            MessageType.GET_STATE,
+            (WebSocketSession s, TextMessage m) -> handleGetState(s));
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws AuthenticationException, JsonProcessingException {
 
-        session.getAttributes().put("login", "bop1");
         final String login = SessionOperator.getLogin(session);
 
         if (login == null || accountService.findAccount(login) == null) {
@@ -66,10 +65,10 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
 
         LOGGER.info("Got websocket connection from user {}.", login);
-        gameManagerService.clearUserGame(login);
     }
 
     @Override
+    @SuppressWarnings("OverlyBroadCatchBlock")
     protected void handleTextMessage(WebSocketSession session, TextMessage textMessage) throws Exception {
 
         try {
@@ -96,24 +95,18 @@ public class GameSocketHandler extends TextWebSocketHandler {
         super.afterConnectionClosed(session, status);
     }
 
-    @SuppressWarnings("OverlyBroadCatchBlock")
-    private void handleStartSinglePlayerGame(WebSocketSession session) throws Exception {
+    private void handleStartSingleplayerGame(WebSocketSession session) throws DataAccessException, IOException {
 
-        final String login = SessionOperator.getLogin(session);
-        assert login != null;
-        final Dashes dashes = dashesService.getRandomDash(login);
-        LOGGER.info("Got dashes #{}, {} for {}", dashes.getId(), dashes.getWord(), login);
-
-        final SingleplayerGame game = gameManagerService.createSingleplayerGame(session, login, dashes.getId());
-        final float timePassed = gameManagerService.startTimer(game.getId(), GameType.SINGLEPLAYER);
-
-        final WebSocketMessage data = new WebSocketMessage<>(
-            MessageType.STATE.toString(),
-            new SingleplayerGameStateContent(dashes, timePassed, GameManagerService.SINGLEPLAYER_TIME_LIMIT));
-        SessionOperator.sendMessage(session, data);
+        final SingleplayerGame game = gameManagerService.createSingleplayerGame(session);
+        gameManagerService.startTimer(game.getId(), GameType.SINGLEPLAYER);
     }
 
-    @SuppressWarnings("OverlyBroadCatchBlock")
+    private void handleStartMultiplayerGame(WebSocketSession session) {
+
+        gameManagerService.queueForMultiplayerGame(session, PlayerRole.ANYONE);
+    }
+
+    @SuppressWarnings("OverlyBroadThrowsClause")
     private void handleCheckAnswer(WebSocketSession session, TextMessage textMessage) throws Exception {
 
         final String login = SessionOperator.getLogin(session);
@@ -125,14 +118,12 @@ public class GameSocketHandler extends TextWebSocketHandler {
         gameManagerService.checkAnswer(login, answerContent.getWord());
     }
 
-    private void handleGetSate(WebSocketSession session) throws Exception {
+    private void handleGetState(WebSocketSession session) throws IOException {
 
-        final String login = SessionOperator.getLogin(session);
-        assert login != null;
-
-        gameManagerService.sendGameState(login);
+        gameManagerService.sendGameState(session);
     }
 
+    @SuppressWarnings("OverlyBroadThrowsClause")
     private WebSocketMessage<?> readMessage(TextMessage textMessage, Class contentClass) throws IOException {
 
         final JavaType type = OBJECT_MAPPER.getTypeFactory().constructParametricType(WebSocketMessage.class, contentClass);

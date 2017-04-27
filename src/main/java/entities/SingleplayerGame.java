@@ -5,25 +5,24 @@ import org.jetbrains.annotations.NotNull;
 public class SingleplayerGame extends BasicGame {
 
     private final @NotNull String login;
-    private final int dashesId;
+    private final @NotNull Dashes dashes;
 
     public SingleplayerGame(
         int id,
         @NotNull String login,
-        int dashesId,
-        @NotNull String word) {
+        @NotNull Dashes dashes) {
 
-        super(id, word);
+        super(id, dashes.getWord());
 
         this.login = login;
-        this.dashesId = dashesId;
+        this.dashes = dashes;
     }
 
     public @NotNull String getLogin() {
         return login;
     }
 
-    public int getDashesId() {
-        return dashesId;
+    public @NotNull Dashes getDashes() {
+        return dashes;
     }
 }
