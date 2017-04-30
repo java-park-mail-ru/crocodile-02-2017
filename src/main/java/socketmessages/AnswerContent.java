@@ -10,7 +10,7 @@ public class AnswerContent extends EmptyContent {
 
     public static final String WORD_ATTR = "answer";
 
-    private final String word;
+    private final @Nullable String word;
 
     public AnswerContent(
         @Nullable @JsonProperty(WORD_ATTR) String word) {

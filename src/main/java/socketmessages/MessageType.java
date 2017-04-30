@@ -1,5 +1,7 @@
 package socketmessages;
 
+import org.jetbrains.annotations.NotNull;
+
 public enum MessageType {
 
     EMPTY(""),
@@ -10,9 +12,10 @@ public enum MessageType {
     START_MULTIPLAYER_GAME("START_MP_GAME"),
     CHECK_ANSWER("GET_ANSWER"),
     STOP_GAME("STOP_GAME"),
-    TIMER_STATE("TIMER_STATE");
+    TIMER_STATE("TIMER_STATE"),
+    EXIT_GAME("EXIT");;
 
-    private String type;
+    private final String type;
 
     MessageType(String type) {
         this.type = type;
@@ -32,7 +35,7 @@ public enum MessageType {
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return type;
     }
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public class MultiplayerGame extends BasicGame {
 
-    private @NotNull ArrayList<String> logins;
+    private final @NotNull ArrayList<String> logins;
 
     public MultiplayerGame(
         int id,

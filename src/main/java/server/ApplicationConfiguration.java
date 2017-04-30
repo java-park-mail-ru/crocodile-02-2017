@@ -4,10 +4,8 @@ import database.AccountServiceDb;
 import database.DashesServiceDb;
 import database.MultiplayerGamesServiceDb;
 import database.SingleplayerGamesServiceDb;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.handler.PerConnectionWebSocketHandler;
@@ -18,13 +16,6 @@ import websocket.WebSocketMessageHandler;
 @SuppressWarnings("SpringJavaAutowiringInspection")
 @Configuration
 public class ApplicationConfiguration {
-
-    final Environment environment;
-
-    @Autowired
-    public ApplicationConfiguration(Environment environment) {
-        this.environment = environment;
-    }
 
     @Bean
     public AccountServiceDb accountService(NamedParameterJdbcTemplate database) {

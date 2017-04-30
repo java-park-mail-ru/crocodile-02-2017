@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
-@SuppressWarnings({"OverlyBroadThrowsClause", "SpringJavaAutowiredMembersInspection"})
+@SuppressWarnings({"OverlyBroadThrowsClause"})
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)

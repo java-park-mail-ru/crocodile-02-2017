@@ -12,7 +12,7 @@ public class BaseGameContent extends EmptyContent {
     public static final String TIME_PASSED_ATTR = "current_time";
     public static final String TIME_LIMIT_ATTR = "timer";
 
-    protected final GameType gameType;
+    protected final @NotNull GameType gameType;
     protected final float timePassed;
     protected final float timeLimit;
 
@@ -24,7 +24,7 @@ public class BaseGameContent extends EmptyContent {
     }
 
     @JsonProperty(TYPE_ATTR)
-    public String getType() {
+    public @NotNull String getType() {
         return gameType.toString();
     }
 

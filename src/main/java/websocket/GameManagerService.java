@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import socketmessages.*;
 
@@ -23,27 +24,22 @@ import java.util.stream.Collectors;
 @Service
 public class GameManagerService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
-
     public static final int SINGLEPLAYER_TIME_LIMIT = 60;
     public static final int SINGLEPLAYER_GAME_SCORE = 1;
-
     public static final int MULTIPLAYER_LOWER_PLAYERS_LIMIT = 2;
     public static final int MULTIPLAYER_UPPER_PLAYERS_LIMIT = 6;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
     public static final int MULTIPLAYER_TIME_LIMIT = 120;
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
+    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
     private final AccountService accountService;
     private final DashesService dashesService;
     private final SingleplayerGamesService singleplayerGamesService;
     private final MultiplayerGamesService multiplayerGamesService;
-
     private final Map<String, GameRelation> relatedGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentSingleplayerGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentMultiplayerGames = new ConcurrentHashMap<>();
     private final Map<String, QueueRelation> queuedPlayers = new ConcurrentHashMap<>();
-
-    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
 
 
     @Autowired
@@ -59,164 +55,7 @@ public class GameManagerService {
         this.multiplayerGamesService = multiplayerGamesService;
     }
 
-    private static final class QueueRelation {
-
-        private PlayerRole role;
-        private WebSocketSession session;
-
-        QueueRelation(PlayerRole role, WebSocketSession session) {
-
-            this.role = role;
-            this.session = session;
-        }
-
-        public PlayerRole getRole() {
-            return role;
-        }
-
-        public WebSocketSession getSession() {
-            return session;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    private static final class GameRelation {
-
-        private int gameId;
-        private GameType type;
-        private PlayerRole role;
-        private WebSocketSession session;
-
-        GameRelation(int gameId, GameType gameType, WebSocketSession session) {
-
-            this.gameId = gameId;
-            this.type = gameType;
-            this.role = PlayerRole.GUESSER;
-            this.session = session;
-        }
-
-        GameRelation(int gameId, GameType gameType, PlayerRole role, WebSocketSession session) {
-
-            this.gameId = gameId;
-            this.type = gameType;
-            this.role = role;
-            this.session = session;
-        }
-
-        public int getGameId() {
-            return gameId;
-        }
-
-        public GameType getType() {
-            return type;
-        }
-
-        public PlayerRole getRole() {
-            return role;
-        }
-
-        public WebSocketSession getSession() {
-            return session;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    private static final class ScheduledGame {
-
-        private final BasicGame game;
-        private final GameType type;
-        private ScheduledFuture<?> shutdownTask;
-        private Runnable shutdownCommand;
-        private long timeLeftMillis;
-        private ScheduledFuture<?> repeatTask;
-
-        private ArrayList<PicturePointContent> points = new ArrayList<>();
-
-        ScheduledGame(BasicGame game, GameType type) {
-
-            this.game = game;
-            this.type = type;
-            this.shutdownTask = SCHEDULER.schedule(() -> (0), 0, TimeUnit.SECONDS);
-        }
-
-        public GameType getType() {
-            return type;
-        }
-
-        public void addPoint(PicturePointContent point) {
-            points.add(point);
-        }
-
-        public ArrayList<PicturePointContent> getPoints() {
-            return points;
-        }
-
-        void rechedule(Runnable task, int delaySeconds) {
-
-            cancelShutdown();
-            shutdownCommand = task;
-            timeLeftMillis = 0;
-            shutdownTask = SCHEDULER.schedule(task, delaySeconds, TimeUnit.SECONDS);
-        }
-
-        void addRepeatable(Runnable task, int periodSeconds) {
-
-            this.repeatTask = SCHEDULER.schedule(task, periodSeconds, TimeUnit.SECONDS);
-        }
-
-        synchronized boolean cancelShutdown() {
-
-            timeLeftMillis = shutdownTask.getDelay(TimeUnit.MILLISECONDS);
-
-            if (!shutdownTask.isCancelled() && !shutdownTask.isDone() && (timeLeftMillis > 0)) {
-
-                shutdownTask.cancel(false);
-                return true;
-            }
-
-            return false;
-        }
-
-        synchronized void resumeShutdown() {
-
-            if (shutdownTask.isCancelled() && (timeLeftMillis > 0)) {
-
-                shutdownTask = SCHEDULER.schedule(shutdownCommand, timeLeftMillis, TimeUnit.MILLISECONDS);
-            }
-        }
-
-        synchronized boolean cancelAll() {
-
-            final boolean result = cancelShutdown();
-
-            if (repeatTask != null) {
-
-                repeatTask.cancel(false);
-                return result;
-            }
-
-            return false;
-        }
-
-        public BasicGame getGame() {
-            return game;
-        }
-
-        public float getTimeRemaining() {
-
-            if (shutdownTask.isCancelled()) {
-                return ((float) timeLeftMillis) / 1000;
-
-            } else if (!shutdownTask.isDone()) {
-
-                return ((float) shutdownTask.getDelay(TimeUnit.MILLISECONDS)) / 1000;
-            }
-
-            return Float.POSITIVE_INFINITY;
-        }
-    }
-
-    public synchronized void endSingleplayerGame(int gameId, GameResult gameResult) {
+    private synchronized void endSingleplayerGame(int gameId, GameResult gameResult) {
 
         if (currentSingleplayerGames.containsKey(gameId)) {
 
@@ -225,15 +64,20 @@ public class GameManagerService {
             singleplayerGamesService.shutdownGame(gameId);
 
             final int score = (gameResult == GameResult.GAME_WON) ? SINGLEPLAYER_GAME_SCORE : 0;
-            final WebSocketSession session = getGameSessions(gameId, GameType.SINGLEPLAYER).get(0);
+            final WebSocketSession session = getGameSessions(scheduledGame).get(0);
             SessionOperator.sendMessage(session, new WebSocketMessage<>(
-                MessageType.STOP_GAME.toString(), new StopGameContent(gameResult, score)));
+                MessageType.STOP_GAME.toString(),
+                new FinishGameContent(
+                    gameResult, score,
+                    SessionOperator.getLogin(session),
+                    scheduledGame.getGame().getWord())));
+
             currentSingleplayerGames.remove(gameId);
             relatedGames.remove(SessionOperator.getLogin(session));
         }
     }
 
-    public synchronized void endMultiplayerGame(int gameId, GameResult gameResult, @Nullable String winnerLogin) {
+    private synchronized void endMultiplayerGame(int gameId, GameResult gameResult, @Nullable String winnerLogin) {
 
         if (currentMultiplayerGames.containsKey(gameId)) {
 
@@ -242,15 +86,18 @@ public class GameManagerService {
             multiplayerGamesService.shutdownGame(gameId);
 
             final int score = (gameResult == GameResult.GAME_WON) ? MULTIPLAYER_GAME_SCORE : 0;
-            final ArrayList<WebSocketSession> losers = getGameSessions(gameId, GameType.MULTIPLAYER);
+            final ArrayList<WebSocketSession> losers = getGameSessions(scheduledGame);
+            final String word = scheduledGame.getGame().getWord();
 
             if (gameResult == GameResult.GAME_WON) {
 
                 SessionOperator.sendMessage(
                     relatedGames.get(winnerLogin).getSession(),
                     new WebSocketMessage<>(
-                        MessageType.STOP_GAME.toString(), new StopGameContent(gameResult, score))
-                );
+                        MessageType.STOP_GAME.toString(),
+                        new FinishGameContent(
+                            gameResult, score,
+                            winnerLogin, word)));
 
                 losers.remove(relatedGames.get(winnerLogin).getSession());
                 relatedGames.remove(winnerLogin);
@@ -262,7 +109,9 @@ public class GameManagerService {
                     SessionOperator.sendMessage(
                         session, new WebSocketMessage<>(
                             MessageType.STOP_GAME.toString(),
-                            new StopGameContent(GameResult.GAME_LOST, 0)));
+                            new FinishGameContent(
+                                GameResult.GAME_LOST, 0,
+                                winnerLogin, word)));
 
                     relatedGames.remove(SessionOperator.getLogin(session));
                 });
@@ -288,7 +137,7 @@ public class GameManagerService {
         return game;
     }
 
-    @SuppressWarnings({"Convert2MethodRef", "InfiniteLoopStatement"})
+    @SuppressWarnings("Convert2MethodRef")
     private void checkQueue() throws IOException {
 
         final ArrayList<String> possiblePainters = new ArrayList<>();
@@ -373,7 +222,7 @@ public class GameManagerService {
             return;
         }
 
-        final ArrayList<WebSocketSession> recieverSessions = getGameSessions(scheduledGame.getGame().getId(), GameType.MULTIPLAYER);
+        final ArrayList<WebSocketSession> recieverSessions = getGameSessions(scheduledGame);
         recieverSessions.removeIf(e -> SessionOperator.getLogin(e).equals(login));
         scheduledGame.addPoint(point);
         recieverSessions.forEach(
@@ -404,7 +253,7 @@ public class GameManagerService {
     }
 
     //todo throws error if not exists
-    public float startTimer(int gameId, GameType gameType) throws IOException {
+    public void startTimer(int gameId, GameType gameType) throws IOException {
 
         final ScheduledGame scheduledGame = getScheduledGame(gameId, gameType);
 
@@ -414,7 +263,7 @@ public class GameManagerService {
                 getLoseTask(scheduledGame),
                 getFinishTime(gameType));
 
-            final ArrayList<WebSocketSession> playerSessions = getGameSessions(gameId, gameType);
+            final ArrayList<WebSocketSession> playerSessions = getGameSessions(scheduledGame);
 
             for (WebSocketSession session : playerSessions) {
 
@@ -423,13 +272,10 @@ public class GameManagerService {
                 final WebSocketMessage<BaseGameContent> gameState = getGameState(scheduledGame, login);
                 SessionOperator.sendMessage(session, gameState);
             }
-
-            return scheduledGame.getTimeRemaining();
         }
-
-        return 0;
     }
 
+    //todo throws error if not exists
     public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) throws Exception {
 
         final String login = SessionOperator.getLogin(session);
@@ -458,6 +304,26 @@ public class GameManagerService {
         }
     }
 
+    //todo throws error if not exists or wrong type
+    public void exitGame(WebSocketSession session) throws IOException {
+
+        final String login = SessionOperator.getLogin(session);
+        final ScheduledGame scheduledGame = getUserScheduledGame(login);
+
+        if ((scheduledGame == null)) {
+            return;
+        }
+
+        if (scheduledGame.getType() == GameType.MULTIPLAYER) {
+
+            final MultiplayerGame game = (MultiplayerGame) scheduledGame.getGame();
+            game.getUserLogins().remove(login);
+            relatedGames.remove(login);
+            session.close(CloseStatus.NORMAL);
+            //todo remove from db;
+        }
+    }
+
     private int getFinishTime(GameType gameType) {
 
         return (gameType == GameType.SINGLEPLAYER) ?
@@ -477,6 +343,7 @@ public class GameManagerService {
         if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
 
             accountService.updateAccountRating(winnerLogin, SINGLEPLAYER_GAME_SCORE);
+            dashesService.addUsedDashes(winnerLogin, ((SingleplayerGame) scheduledGame.getGame()).getDashes().getId());
             endSingleplayerGame(scheduledGame.getGame().getId(), GameResult.GAME_WON);
         } else {
 
@@ -507,26 +374,24 @@ public class GameManagerService {
         }
 
         final int gameId = gameRelation.getGameId();
-        final GameType gameType = gameRelation.getType();
 
-        return (gameType == GameType.SINGLEPLAYER) ?
+        return (gameRelation.getType() == GameType.SINGLEPLAYER) ?
             currentSingleplayerGames.get(gameId) :
             currentMultiplayerGames.get(gameId);
     }
 
-    private ArrayList<WebSocketSession> getGameSessions(int gameId, GameType gameType) {
+    private ArrayList<WebSocketSession> getGameSessions(ScheduledGame scheduledGame) {
 
-        final ScheduledGame scheduledGame = getScheduledGame(gameId, gameType);
         final ArrayList<WebSocketSession> sessions = new ArrayList<>();
 
         if (scheduledGame != null) {
 
-            if (gameType == GameType.SINGLEPLAYER) {
+            if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
 
                 final String login = ((SingleplayerGame) scheduledGame.getGame()).getLogin();
                 sessions.add(relatedGames.get(login).getSession());
 
-            } else if (gameType == GameType.MULTIPLAYER) {
+            } else {
 
                 final ArrayList<String> logins = ((MultiplayerGame) scheduledGame.getGame()).getUserLogins();
                 sessions.addAll(relatedGames.entrySet().stream()
@@ -564,6 +429,166 @@ public class GameManagerService {
                     relatedGames.get(login).getRole(),
                     multiplayerGame.getUserLogins(),
                     multiplayerGame.getWord()));
+        }
+    }
+
+    private static final class QueueRelation {
+
+        private final PlayerRole role;
+        private final WebSocketSession session;
+
+        QueueRelation(PlayerRole role, WebSocketSession session) {
+
+            this.role = role;
+            this.session = session;
+        }
+
+        public PlayerRole getRole() {
+            return role;
+        }
+
+        public WebSocketSession getSession() {
+            return session;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private static final class GameRelation {
+
+        private final int gameId;
+        private final GameType type;
+        private final PlayerRole role;
+        private final WebSocketSession session;
+
+        GameRelation(int gameId, GameType gameType, WebSocketSession session) {
+
+            this.gameId = gameId;
+            this.type = gameType;
+            this.role = PlayerRole.GUESSER;
+            this.session = session;
+        }
+
+        GameRelation(int gameId, GameType gameType, PlayerRole role, WebSocketSession session) {
+
+            this.gameId = gameId;
+            this.type = gameType;
+            this.role = role;
+            this.session = session;
+        }
+
+        public int getGameId() {
+            return gameId;
+        }
+
+        public GameType getType() {
+            return type;
+        }
+
+        public PlayerRole getRole() {
+            return role;
+        }
+
+        public WebSocketSession getSession() {
+            return session;
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private static final class ScheduledGame {
+
+        private final BasicGame game;
+        private final GameType type;
+        private final ArrayList<PicturePointContent> points = new ArrayList<>();
+        private ScheduledFuture<?> shutdownTask;
+        private Runnable shutdownCommand;
+        private long timeLeftMillis;
+        private ScheduledFuture<?> repeatTask;
+
+        ScheduledGame(BasicGame game, GameType type) {
+
+            this.game = game;
+            this.type = type;
+            this.shutdownTask = SCHEDULER.schedule(() -> (0), 0, TimeUnit.SECONDS);
+        }
+
+        public GameType getType() {
+            return type;
+        }
+
+        public void addPoint(PicturePointContent point) {
+            points.add(point);
+        }
+
+        public ArrayList<PicturePointContent> getPoints() {
+            return points;
+        }
+
+        void rechedule(Runnable task, int delaySeconds) {
+
+            cancelShutdown();
+            shutdownCommand = task;
+            timeLeftMillis = 0;
+            shutdownTask = SCHEDULER.schedule(task, delaySeconds, TimeUnit.SECONDS);
+        }
+
+        void addRepeatable(Runnable task, int periodSeconds) {
+
+            this.repeatTask = SCHEDULER.schedule(task, periodSeconds, TimeUnit.SECONDS);
+        }
+
+        synchronized boolean cancelShutdown() {
+
+            timeLeftMillis = shutdownTask.getDelay(TimeUnit.MILLISECONDS);
+
+            if (!shutdownTask.isCancelled() && !shutdownTask.isDone() && (timeLeftMillis > 0)) {
+
+                shutdownTask.cancel(false);
+                return true;
+            }
+
+            return false;
+        }
+
+        synchronized void resumeShutdown() {
+
+            if (shutdownTask.isCancelled() && (timeLeftMillis > 0)) {
+
+                shutdownTask = SCHEDULER.schedule(shutdownCommand, timeLeftMillis, TimeUnit.MILLISECONDS);
+            }
+        }
+
+        synchronized boolean cancelAll() {
+
+            final boolean shutdownCancelled = cancelShutdown();
+
+            if (shutdownCancelled && (repeatTask != null)) {
+
+                repeatTask.cancel(false);
+                return true;
+            }
+
+            if (shutdownCancelled) {
+                resumeShutdown();
+            }
+
+            return false;
+        }
+
+        public BasicGame getGame() {
+            return game;
+        }
+
+        public float getTimeRemaining() {
+
+            if (shutdownTask.isCancelled()) {
+                return ((float) timeLeftMillis) / 1000;
+
+            } else if (!shutdownTask.isDone()) {
+
+                return ((float) shutdownTask.getDelay(TimeUnit.MILLISECONDS)) / 1000;
+            }
+
+            return Float.POSITIVE_INFINITY;
         }
     }
 }

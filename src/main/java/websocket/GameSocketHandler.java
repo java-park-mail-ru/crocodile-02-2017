@@ -55,6 +55,10 @@ public class GameSocketHandler extends TextWebSocketHandler {
         webSocketMessageHandler.setHandler(
             MessageType.NEW_POINT,
             this::handleAddPoint);
+
+        webSocketMessageHandler.setHandler(
+            MessageType.EXIT_GAME,
+            (WebSocketSession s, TextMessage m) -> handleExitGame(s));
     }
 
     @Override
@@ -131,6 +135,11 @@ public class GameSocketHandler extends TextWebSocketHandler {
     private void handleGetState(WebSocketSession session) throws IOException {
 
         gameManagerService.sendGameState(session);
+    }
+
+    private void handleExitGame(WebSocketSession session) throws IOException {
+
+        gameManagerService.exitGame(session);
     }
 
     @SuppressWarnings("OverlyBroadThrowsClause")

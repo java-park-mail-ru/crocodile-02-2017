@@ -14,7 +14,7 @@ public class WebSocketMessageHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WebSocketMessageHandler.class);
 
-    private EnumMap<MessageType, MessageHandler> handlers = new EnumMap<>(MessageType.class);
+    private final EnumMap<MessageType, MessageHandler> handlers = new EnumMap<>(MessageType.class);
 
     public void setHandler(MessageType messageType, MessageHandler handler) {
 

@@ -2,8 +2,9 @@ package socketmessages;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -17,14 +18,14 @@ public class PicturePointContent extends EmptyContent {
     private final float pointX;
     private final float pointY;
     private final boolean down;
-    private final @NotNull String color;
+    private final @Nullable String color;
 
     @JsonCreator
     public PicturePointContent(
         @JsonProperty(X_ATTR) float x,
         @JsonProperty(Y_ATTR) float y,
         @JsonProperty(DOWN_ATTR) boolean down,
-        @NotNull @JsonProperty(COLOR_ATTR) String color) {
+        @Nullable @JsonProperty(COLOR_ATTR) String color) {
 
         this.pointX = x;
         this.pointY = y;
@@ -48,7 +49,8 @@ public class PicturePointContent extends EmptyContent {
     }
 
     @JsonProperty(COLOR_ATTR)
-    public @NotNull String getColor() {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public @Nullable String getColor() {
         return color;
     }
 }

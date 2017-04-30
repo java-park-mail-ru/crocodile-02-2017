@@ -1,11 +1,13 @@
 package socketmessages;
 
+import org.jetbrains.annotations.NotNull;
+
 public enum GameType {
 
     SINGLEPLAYER("sp"),
     MULTIPLAYER("mp");
 
-    private String type;
+    private final String type;
 
     GameType(String type) {
 
@@ -13,7 +15,7 @@ public enum GameType {
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return type;
     }
 }

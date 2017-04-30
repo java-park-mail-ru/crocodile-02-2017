@@ -2,6 +2,7 @@ package socketmessages;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -15,15 +16,15 @@ public class MultiplayerGameStateContent extends BaseGameContent {
     public static final String PLAYERS_ATTR = "players";
     public static final String WORD_ATTR = "word";
 
-    private final PlayerRole role;
-    private final ArrayList<String> players;
-    private final String word;
+    private final @NotNull PlayerRole role;
+    private final @NotNull ArrayList<String> players;
+    private final @Nullable String word;
 
     public MultiplayerGameStateContent(
         float timePassed,
         float timeLimit,
-        PlayerRole role,
-        ArrayList<String> players,
+        @NotNull PlayerRole role,
+        @NotNull ArrayList<String> players,
         @Nullable String word
     ) {
         super(GameType.MULTIPLAYER, timePassed, timeLimit);
@@ -33,18 +34,18 @@ public class MultiplayerGameStateContent extends BaseGameContent {
     }
 
     @JsonProperty(ROLE_ATTR)
-    public String getRole() {
+    public @NotNull String getRole() {
         return role.toString();
     }
 
     @JsonProperty(PLAYERS_ATTR)
-    public ArrayList<String> getPlayers() {
+    public @NotNull ArrayList<String> getPlayers() {
         return players;
     }
 
     @JsonInclude(NON_NULL)
     @JsonProperty(WORD_ATTR)
-    public String getWord() {
+    public @Nullable String getWord() {
         return word;
     }
 }
