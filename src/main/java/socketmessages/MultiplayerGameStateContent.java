@@ -17,14 +17,14 @@ public class MultiplayerGameStateContent extends BaseGameContent {
     public static final String WORD_ATTR = "word";
 
     private final @NotNull PlayerRole role;
-    private final @NotNull ArrayList<String> players;
+    private final @NotNull ArrayList<PlayerInfo> players;
     private final @Nullable String word;
 
     public MultiplayerGameStateContent(
         float timePassed,
         float timeLimit,
         @NotNull PlayerRole role,
-        @NotNull ArrayList<String> players,
+        @NotNull ArrayList<PlayerInfo> players,
         @Nullable String word
     ) {
         super(GameType.MULTIPLAYER, timePassed, timeLimit);
@@ -39,7 +39,7 @@ public class MultiplayerGameStateContent extends BaseGameContent {
     }
 
     @JsonProperty(PLAYERS_ATTR)
-    public @NotNull ArrayList<String> getPlayers() {
+    public @NotNull ArrayList<PlayerInfo> getPlayers() {
         return players;
     }
 
