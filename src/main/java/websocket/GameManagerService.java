@@ -295,9 +295,7 @@ public class GameManagerService {
         }
 
         final boolean answerCorrect = scheduledGame.getGame().isCorrectAnswer(word);
-
-        final GameRelation gameRelation = relatedGames.get(login);
-        sendAnswerResponse(gameRelation.getSession(), answerCorrect);
+        sendAnswerResponse(getGameSessions(scheduledGame), answerCorrect);
 
         if (answerCorrect) {
 
@@ -356,15 +354,18 @@ public class GameManagerService {
         }
     }
 
-    private void sendAnswerResponse(WebSocketSession session, boolean answerCorrect) {
+    private void sendAnswerResponse(ArrayList<WebSocketSession> sessions, boolean answerCorrect) {
 
-        final String login = SessionOperator.getLogin(session);
-        final int playerNumber = relatedGames.get(login).getPlayerNumber();
-        final PlayerInfo playerInfo = new PlayerInfo(login, playerNumber);
+        for (WebSocketSession session : sessions) {
 
-        final WebSocketMessage data = new WebSocketMessage<>(
-            MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answerCorrect, playerInfo));
-        SessionOperator.sendMessage(session, data);
+            final String login = SessionOperator.getLogin(session);
+            final int playerNumber = relatedGames.get(login).getPlayerNumber();
+            final PlayerInfo playerInfo = new PlayerInfo(login, playerNumber);
+
+            final WebSocketMessage data = new WebSocketMessage<>(
+                MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answerCorrect, playerInfo));
+            SessionOperator.sendMessage(session, data);
+        }
     }
 
     private @Nullable ScheduledGame getScheduledGame(int gameId, GameType gameType) {
