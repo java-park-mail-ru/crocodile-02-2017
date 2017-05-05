@@ -29,12 +29,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
-@SuppressWarnings({"OverlyBroadThrowsClause"})
+@SuppressWarnings({"OverlyBroadThrowsClause", "SpringJavaAutowiredMembersInspection"})
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @Transactional
 public class InterfaceTest {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final String CORRECT_PASSWORD = "correct";
     private static final String INCORRECT_PASSWORD = "incor";
@@ -47,9 +49,6 @@ public class InterfaceTest {
 
     @Autowired
     private MockMvc mvc;
-
-    @Autowired
-    private ObjectMapper mapper;
 
     public void assertAccountFields(@Nullable Account account, String login, String password, String email, int rating) {
 
@@ -75,7 +74,7 @@ public class InterfaceTest {
             .perform(post("/register/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
     }
@@ -91,7 +90,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
@@ -103,7 +102,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
@@ -115,7 +114,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
     }
@@ -131,7 +130,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
@@ -147,7 +146,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
@@ -166,7 +165,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
     }
@@ -182,7 +181,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/register/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
@@ -208,7 +207,7 @@ public class InterfaceTest {
             .perform(post("/login/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "anyName2")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_OUT.toString()));
     }
@@ -224,7 +223,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
 
@@ -236,7 +235,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INSUFFICIENT.toString()));
     }
@@ -252,7 +251,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
 
@@ -263,7 +262,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
 
@@ -275,7 +274,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.FORBIDDEN.toString()));
     }
@@ -292,7 +291,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/login/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isOk())
             .andExpect(request().sessionAttribute(ApplicationController.SESSION_LOGIN_ATTR, data.getLogin()));
     }
@@ -308,7 +307,7 @@ public class InterfaceTest {
         mvc
             .perform(post("/change/")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.LOG_IN.toString()));
     }
@@ -322,7 +321,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, "noSuchName")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.NOT_FOUND.toString()));
     }
@@ -347,7 +346,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.EXISTS.toString()));
     }
@@ -369,7 +368,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
@@ -392,7 +391,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, login)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath(ErrorData.CODE_ATTR).value(ErrorCode.INVALID_FIELD.toString()));
     }
@@ -412,7 +411,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(account.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(account.getEmail()))
@@ -440,7 +439,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))
@@ -468,7 +467,7 @@ public class InterfaceTest {
             .perform(post("/change/")
                 .sessionAttr(ApplicationController.SESSION_LOGIN_ATTR, account.getLogin())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(mapper.writeValueAsString(data)))
+                .content(MAPPER.writeValueAsString(data)))
             .andExpect(status().isOk())
             .andExpect(jsonPath(AccountData.LOGIN_ATTR).value(data.getLogin()))
             .andExpect(jsonPath(AccountData.EMAIL_ATTR).value(data.getEmail()))

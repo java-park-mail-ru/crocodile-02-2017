@@ -73,6 +73,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
 
         LOGGER.info("Got websocket connection from user {}.", login);
+        gameManagerService.clearData(session);
     }
 
     @Override
@@ -89,17 +90,20 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
         } catch (Exception exception) {
 
-            LOGGER.error(exception.getMessage());
+            LOGGER.error("{}", exception.getCause());
             throw exception;
         }
     }
 
+    @SuppressWarnings("OverlyBroadThrowsClause")
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 
         LOGGER.info("Websocket connection with user {} closed with reason {}.",
             SessionOperator.getLogin(session),
             status.getReason());
+
+        gameManagerService.clearData(session);
         super.afterConnectionClosed(session, status);
     }
 
@@ -139,7 +143,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
 
     private void handleExitGame(WebSocketSession session) throws IOException {
 
-        gameManagerService.exitGame(session);
+        gameManagerService.clearData(session);
     }
 
     @SuppressWarnings("OverlyBroadThrowsClause")

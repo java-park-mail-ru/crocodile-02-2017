@@ -16,7 +16,6 @@ public class SingleplayerGameStateContent extends BaseGameContent {
 
     public static final String POINTS_ATTR = "points";
     public static final String TIME_PASSED_ATTR = "current_time";
-    public static final String TIME_LIMIT_ATTR = "timer";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

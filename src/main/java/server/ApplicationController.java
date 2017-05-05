@@ -53,7 +53,7 @@ public class ApplicationController {
 
         if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to register while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
+            LOGGER.debug("User {} tried to register while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
             return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -104,7 +104,7 @@ public class ApplicationController {
 
         if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.debug("User #{} tried to login while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
+            LOGGER.debug("User {} tried to login while he was logged in.", session.getAttribute(SESSION_LOGIN_ATTR));
             return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorData(ErrorCode.LOG_OUT, "You must be logged out to perform this operation."));
@@ -122,7 +122,7 @@ public class ApplicationController {
 
         if ((account != null) && (account.passwordMatches(body.getPassword()))) {
 
-            LOGGER.info("User #{} logged in.", account.getLogin());
+            LOGGER.info("User {} logged in.", account.getLogin());
             session.setAttribute(SESSION_LOGIN_ATTR, account.getLogin());
             return ResponseEntity.ok("");
         }
@@ -149,7 +149,7 @@ public class ApplicationController {
 
         if (account == null) {
 
-            LOGGER.error("Account #{} is no longer valid.", login);
+            LOGGER.error("Account {} is no longer valid.", login);
             return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
@@ -194,7 +194,7 @@ public class ApplicationController {
 
         if (session.getAttribute(SESSION_LOGIN_ATTR) != null) {
 
-            LOGGER.info("User #{} logged out.", session.getAttribute(SESSION_LOGIN_ATTR));
+            LOGGER.info("User {} logged out.", session.getAttribute(SESSION_LOGIN_ATTR));
         }
 
         session.invalidate();
@@ -217,11 +217,11 @@ public class ApplicationController {
 
         if (account != null) {
 
-            LOGGER.info("Credentials were sent to user #{}.", account.getLogin());
+            LOGGER.info("Credentials were sent to user {}.", account.getLogin());
             return ResponseEntity.ok(new AccountData(account));
         }
 
-        LOGGER.error("Account #{} is no longer valid.", login);
+        LOGGER.error("Account {} is no longer valid.", login);
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(new ErrorData(ErrorCode.NOT_FOUND, "Your account is no longer valid."));
