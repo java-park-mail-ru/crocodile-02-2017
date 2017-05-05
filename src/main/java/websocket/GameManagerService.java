@@ -28,7 +28,7 @@ public class GameManagerService {
     public static final int MULTIPLAYER_LOWER_PLAYERS_LIMIT = 2;
     public static final int MULTIPLAYER_UPPER_PLAYERS_LIMIT = 6;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
-    public static final int MULTIPLAYER_TIME_LIMIT = 30;
+    public static final int MULTIPLAYER_TIME_LIMIT = 120;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
     private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
