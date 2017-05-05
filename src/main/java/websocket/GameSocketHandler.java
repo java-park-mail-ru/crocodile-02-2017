@@ -141,7 +141,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
         gameManagerService.sendGameState(session);
     }
 
-    private void handleExitGame(WebSocketSession session) throws IOException {
+    private void handleExitGame(WebSocketSession session) {
 
         gameManagerService.clearData(session);
     }

@@ -30,7 +30,6 @@ public class WebSocketMessageHandler {
             handler.handle(session, textMessage);
 
         } else {
-
             LOGGER.warn("Handler for websocket message of type {} does not exist.", messageType.toString());
         }
     }

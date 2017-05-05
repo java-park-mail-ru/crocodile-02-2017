@@ -28,7 +28,7 @@ public class GameManagerService {
     public static final int MULTIPLAYER_LOWER_PLAYERS_LIMIT = 2;
     public static final int MULTIPLAYER_UPPER_PLAYERS_LIMIT = 6;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
-    public static final int MULTIPLAYER_TIME_LIMIT = 120;
+    public static final int MULTIPLAYER_TIME_LIMIT = 30;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
     private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
@@ -415,7 +415,7 @@ public class GameManagerService {
         final ScheduledGame scheduledGame = getScheduledGame(gameId, gameType);
 
         if (scheduledGame == null) {
-            LOGGER.warn("Tried to start timer for a {} game #{} that does not exist.", gameType.toString(), gameId);
+            LOGGER.warn("Tried to start timer for a {} game #{} that does not exist.", gameType.toString().toUpperCase(), gameId);
             return;
         }
 
@@ -434,7 +434,7 @@ public class GameManagerService {
             getFinishTime(gameType));
 
         LOGGER.info("{} game #{} started, timer: {}.",
-            gameType.toString(), scheduledGame.getGame().getId(), scheduledGame.getTimeRemaining());
+            gameType.toString().toUpperCase(), scheduledGame.getGame().getId(), scheduledGame.getTimeRemaining());
     }
 
     public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) throws Exception {
@@ -452,10 +452,11 @@ public class GameManagerService {
         }
 
         LOGGER.debug("Time left: {}.", scheduledGame.getTimeRemaining());
+
         final boolean answerCorrect = scheduledGame.getGame().isCorrectAnswer(word);
         final int playerNumber = relatedGames.get(login).getPlayerNumber();
         final PlayerInfo senderInfo = new PlayerInfo(login, playerNumber);
-        sendAnswerResponse(getGameSessions(scheduledGame), answerCorrect, senderInfo);
+        resendAnswer(getGameSessions(scheduledGame), word, answerCorrect, senderInfo);
 
         if (answerCorrect) {
 
@@ -524,12 +525,12 @@ public class GameManagerService {
         }
     }
 
-    private void sendAnswerResponse(ArrayList<WebSocketSession> sessions, boolean answerCorrect, PlayerInfo senderInfo) {
+    private void resendAnswer(ArrayList<WebSocketSession> sessions, @Nullable String answer, boolean answerCorrect, PlayerInfo senderInfo) {
 
         for (WebSocketSession session : sessions) {
 
             final WebSocketMessage data = new WebSocketMessage<>(
-                MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answerCorrect, senderInfo));
+                MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answer, answerCorrect, senderInfo));
             SessionOperator.sendMessage(session, data);
         }
     }
