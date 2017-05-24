@@ -26,7 +26,7 @@ public class GameManagerService {
 
     public static final int SINGLEPLAYER_TIME_LIMIT = 60;
     public static final int SINGLEPLAYER_GAME_SCORE = 1;
-    public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 2;
+    public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 1;
     public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 5;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
     public static final int MULTIPLAYER_TIME_LIMIT = 120;
@@ -40,6 +40,7 @@ public class GameManagerService {
     private final MultiplayerGamesService multiplayerGamesService;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
+    private final QueueManager queueManager = new QueueManager();
     private final Map<String, GameRelation> relatedGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentSingleplayerGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentMultiplayerGames = new ConcurrentHashMap<>();
@@ -58,7 +59,12 @@ public class GameManagerService {
         this.multiplayerGamesService = multiplayerGamesService;
 
         scheduler.scheduleAtFixedRate(
-            this::checkQueue, QUEUE_REFRESH_TIME, QUEUE_REFRESH_TIME, TimeUnit.SECONDS);
+            () -> {
+                if (!queueManager.isRunning()) {
+                    queueManager.checkQueue();
+                }
+            },
+            QUEUE_REFRESH_TIME, QUEUE_REFRESH_TIME, TimeUnit.SECONDS);
     }
 
     private static final class QueueRelation {
@@ -217,6 +223,118 @@ public class GameManagerService {
         }
     }
 
+    private final class QueueManager {
+
+        private boolean running = false;
+
+        public boolean isRunning() {
+            return running;
+        }
+
+        private void checkQueue() {
+
+            running = true;
+
+            final ArrayList<String> possiblePainters = new ArrayList<>();
+            possiblePainters.addAll(
+                queuedPlayers.values().stream()
+                    .filter(e -> e.getRole() != PlayerRole.GUESSER)
+                    .map(e -> SessionOperator.getLogin(e.getSession()))
+                    .collect(Collectors.toList()));
+
+            final ArrayList<String> possibleGuessers = new ArrayList<>();
+            possibleGuessers.addAll(
+                queuedPlayers.values().stream()
+                    .filter(e -> e.getRole() != PlayerRole.PAINTER)
+                    .map(e -> SessionOperator.getLogin(e.getSession()))
+                    .collect(Collectors.toList()));
+
+            while (!possiblePainters.isEmpty()) {
+
+                final String painterLogin = possiblePainters.get(0);
+                possiblePainters.remove(painterLogin);
+                possibleGuessers.remove(painterLogin);
+
+                if (possibleGuessers.size() >= (MULTIPLAYER_LOWER_GUESSERS_LIMIT)) {
+
+                    final ArrayList<String> guesserLogins = new ArrayList<>();
+                    final int playersCount = Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_GUESSERS_LIMIT);
+                    guesserLogins.addAll(possibleGuessers.subList(0, playersCount));
+                    possibleGuessers.removeAll(guesserLogins);
+                    final MultiplayerGame game = createMultiplayerGame(painterLogin, guesserLogins);
+                    try {
+                        startTimer(game.getId(), GameType.MULTIPLAYER);
+                    } catch (IOException exception) {
+
+                        LOGGER.error("Something went wrong when starting timer for multiplayer game #{}.", game.getId());
+                        endMultiplayerGame(game.getId(), GameResult.GAME_LOST, null);
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if (!possibleGuessers.isEmpty()) {
+                distributeToAvailableGames(possibleGuessers);
+            }
+
+            running = false;
+        }
+
+        private void distributeToAvailableGames(ArrayList<String> guessers) {
+
+            final ArrayList<MultiplayerGame> availableGames = new ArrayList<>(currentMultiplayerGames.values().stream()
+                .map(e -> (MultiplayerGame) e.getGame())
+                .filter(e -> e.getUserLogins().size() < (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1))
+                .collect(Collectors.toList()));
+
+            for (MultiplayerGame game : availableGames) {
+
+                final int freeSpace = game.getUserLogins().size() - (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1);
+                final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, freeSpace));
+                guessers.removeAll(playersToConnect);
+
+                final ScheduledGame scheduledGame = currentMultiplayerGames.get(game.getId());
+                final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
+
+
+                for (String player : playersToConnect) {
+
+                    final WebSocketSession session = queuedPlayers.get(player).getSession();
+                    final WebSocketMessage<BaseGameContent> gameState;
+
+                    try {
+                        gameState = getGameStateMessage(scheduledGame, player, true);
+
+                    } catch (IOException exception) {
+
+                        LOGGER.error("Something went wrong when joining player {} to multiplayer game #{}.", player, game.getId());
+                        continue;
+                    }
+
+                    game.getUserLogins().add(player);
+                    relatedGames.put(
+                        player,
+                        new GameRelation(
+                            game.getId(),
+                            GameType.MULTIPLAYER,
+                            PlayerRole.GUESSER,
+                            queuedPlayers.get(player).getSession(),
+                            game.getUserLogins().indexOf(player) + 1));
+
+                    SessionOperator.sendMessage(session, gameState);
+                }
+
+                sendPlayersConnected(initialSessions, playersToConnect);
+
+                playersToConnect.forEach(queuedPlayers::remove);
+                if (guessers.isEmpty()) {
+                    break;
+                }
+            }
+        }
+    }
+
     private synchronized void endSingleplayerGame(int gameId, GameResult gameResult) {
 
         if (currentSingleplayerGames.containsKey(gameId)) {
@@ -307,100 +425,6 @@ public class GameManagerService {
         clearData(session);
         final String login = SessionOperator.getLogin(session);
         queuedPlayers.put(login, new QueueRelation(role, session));
-    }
-
-    private void checkQueue() {
-
-        final ArrayList<String> possiblePainters = new ArrayList<>();
-        possiblePainters.addAll(
-            queuedPlayers.values().stream()
-                .filter(e -> e.getRole() != PlayerRole.GUESSER)
-                .map(e -> SessionOperator.getLogin(e.getSession()))
-                .collect(Collectors.toList()));
-
-        final ArrayList<String> possibleGuessers = new ArrayList<>();
-        possibleGuessers.addAll(
-            queuedPlayers.values().stream()
-                .filter(e -> e.getRole() != PlayerRole.PAINTER)
-                .map(e -> SessionOperator.getLogin(e.getSession()))
-                .collect(Collectors.toList()));
-
-        if (!possiblePainters.isEmpty()) {
-
-            final String painterLogin = possiblePainters.get(0);
-            possibleGuessers.remove(painterLogin);
-
-            if (possibleGuessers.size() >= (MULTIPLAYER_LOWER_GUESSERS_LIMIT)) {
-
-                final ArrayList<String> guesserLogins = new ArrayList<>();
-                guesserLogins.addAll(possibleGuessers.subList(0, Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_GUESSERS_LIMIT)));
-                final MultiplayerGame game = createMultiplayerGame(painterLogin, guesserLogins);
-                try {
-                    startTimer(game.getId(), GameType.MULTIPLAYER);
-                } catch (IOException exception) {
-
-                    LOGGER.error("Something went wrong when starting timer for multiplayer game #{}.", game.getId());
-                    endMultiplayerGame(game.getId(), GameResult.GAME_LOST, null);
-                }
-            }
-        }
-
-        if (!possibleGuessers.isEmpty()) {
-            distributeToAvailableGames(possibleGuessers);
-        }
-    }
-
-    private void distributeToAvailableGames(ArrayList<String> guessers) {
-
-        final ArrayList<MultiplayerGame> availableGames = new ArrayList<>(currentMultiplayerGames.values().stream()
-            .map(e -> (MultiplayerGame) e.getGame())
-            .filter(e -> e.getUserLogins().size() < (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1))
-            .collect(Collectors.toList()));
-
-        for (MultiplayerGame game : availableGames) {
-
-            final int freeSpace = game.getUserLogins().size() - (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1);
-            final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, freeSpace));
-            guessers.removeAll(playersToConnect);
-
-            final ScheduledGame scheduledGame = currentMultiplayerGames.get(game.getId());
-            final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
-
-
-            for (String player : playersToConnect) {
-
-                final WebSocketSession session = queuedPlayers.get(player).getSession();
-                final WebSocketMessage<BaseGameContent> gameState;
-
-                try {
-                    gameState = getGameStateMessage(scheduledGame, player, true);
-
-                } catch (IOException exception) {
-
-                    LOGGER.error("Something went wrong when joining player {} to multiplayer game #{}.", player, game.getId());
-                    continue;
-                }
-
-                game.getUserLogins().add(player);
-                relatedGames.put(
-                    player,
-                    new GameRelation(
-                        game.getId(),
-                        GameType.MULTIPLAYER,
-                        PlayerRole.GUESSER,
-                        queuedPlayers.get(player).getSession(),
-                        game.getUserLogins().indexOf(player) + 1));
-
-                SessionOperator.sendMessage(session, gameState);
-            }
-
-            sendPlayersConnected(initialSessions, playersToConnect);
-
-            playersToConnect.forEach(queuedPlayers::remove);
-            if (guessers.isEmpty()) {
-                break;
-            }
-        }
     }
 
     private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
