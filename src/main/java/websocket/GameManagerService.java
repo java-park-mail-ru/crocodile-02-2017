@@ -16,6 +16,7 @@ import socketmessages.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -25,23 +26,24 @@ public class GameManagerService {
 
     public static final int SINGLEPLAYER_TIME_LIMIT = 60;
     public static final int SINGLEPLAYER_GAME_SCORE = 1;
-    public static final int MULTIPLAYER_LOWER_PLAYERS_LIMIT = 2;
-    public static final int MULTIPLAYER_UPPER_PLAYERS_LIMIT = 6;
+    public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 2;
+    public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 5;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
     public static final int MULTIPLAYER_TIME_LIMIT = 120;
+    public static final int QUEUE_REFRESH_TIME = 2;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
-    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
 
     private final AccountService accountService;
     private final DashesService dashesService;
     private final SingleplayerGamesService singleplayerGamesService;
     private final MultiplayerGamesService multiplayerGamesService;
 
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
     private final Map<String, GameRelation> relatedGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentSingleplayerGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentMultiplayerGames = new ConcurrentHashMap<>();
-    private final Map<String, QueueRelation> queuedPlayers = new ConcurrentHashMap<>();
+    private final LinkedHashMap<String, QueueRelation> queuedPlayers = new LinkedHashMap<>();
 
     @Autowired
     public GameManagerService(
@@ -54,6 +56,9 @@ public class GameManagerService {
         this.dashesService = dashesService;
         this.singleplayerGamesService = singleplayerGamesService;
         this.multiplayerGamesService = multiplayerGamesService;
+
+        scheduler.scheduleAtFixedRate(
+            this::checkQueue, QUEUE_REFRESH_TIME, QUEUE_REFRESH_TIME, TimeUnit.SECONDS);
     }
 
     private static final class QueueRelation {
@@ -125,7 +130,7 @@ public class GameManagerService {
     }
 
     @SuppressWarnings("unused")
-    private static final class ScheduledGame {
+    private final class ScheduledGame {
 
         private final BasicGame game;
         private final GameType type;
@@ -139,7 +144,7 @@ public class GameManagerService {
 
             this.game = game;
             this.type = type;
-            this.shutdownTask = SCHEDULER.schedule(() -> (0), 0, TimeUnit.SECONDS);
+            this.shutdownTask = scheduler.schedule(() -> (0), 0, TimeUnit.SECONDS);
         }
 
         public GameType getType() {
@@ -159,11 +164,11 @@ public class GameManagerService {
             cancelShutdown();
             shutdownCommand = task;
             timeLeftMillis = delaySeconds;
-            shutdownTask = SCHEDULER.schedule(task, delaySeconds, TimeUnit.SECONDS);
+            shutdownTask = scheduler.schedule(task, delaySeconds, TimeUnit.SECONDS);
         }
 
         void setRepeatable(Runnable task, int periodSeconds) {
-            this.repeatTask = SCHEDULER.schedule(task, periodSeconds, TimeUnit.SECONDS);
+            this.repeatTask = scheduler.schedule(task, periodSeconds, TimeUnit.SECONDS);
         }
 
         synchronized boolean cancelShutdown() {
@@ -183,7 +188,7 @@ public class GameManagerService {
 
             if (shutdownTask.isCancelled() && (timeLeftMillis > 0)) {
 
-                shutdownTask = SCHEDULER.schedule(shutdownCommand, timeLeftMillis, TimeUnit.MILLISECONDS);
+                shutdownTask = scheduler.schedule(shutdownCommand, timeLeftMillis, TimeUnit.MILLISECONDS);
             }
         }
 
@@ -297,48 +302,129 @@ public class GameManagerService {
         return game;
     }
 
-    public void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) throws IOException {
+    public synchronized void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) throws IOException {
 
         clearData(session);
         final String login = SessionOperator.getLogin(session);
         queuedPlayers.put(login, new QueueRelation(role, session));
-        checkQueue();
     }
 
-    private void checkQueue() throws IOException {
+    private void checkQueue() {
 
         final ArrayList<String> possiblePainters = new ArrayList<>();
         possiblePainters.addAll(
-            queuedPlayers.entrySet().stream()
-                .filter(e -> e.getValue().getRole() != PlayerRole.GUESSER)
-                .map(Map.Entry::getKey)
+            queuedPlayers.values().stream()
+                .filter(e -> e.getRole() != PlayerRole.GUESSER)
+                .map(e -> SessionOperator.getLogin(e.getSession()))
                 .collect(Collectors.toList()));
 
         final ArrayList<String> possibleGuessers = new ArrayList<>();
         possibleGuessers.addAll(
-            queuedPlayers.entrySet().stream()
-                .filter(e -> e.getValue().getRole() != PlayerRole.PAINTER)
-                .map(Map.Entry::getKey)
+            queuedPlayers.values().stream()
+                .filter(e -> e.getRole() != PlayerRole.PAINTER)
+                .map(e -> SessionOperator.getLogin(e.getSession()))
                 .collect(Collectors.toList()));
 
         if (!possiblePainters.isEmpty()) {
 
-            final String painter = possiblePainters.get(0);
-            possibleGuessers.remove(painter);
+            final String painterLogin = possiblePainters.get(0);
+            possibleGuessers.remove(painterLogin);
 
-            if (possibleGuessers.size() >= (MULTIPLAYER_LOWER_PLAYERS_LIMIT - 1)) {
+            if (possibleGuessers.size() >= (MULTIPLAYER_LOWER_GUESSERS_LIMIT)) {
 
-                final ArrayList<String> guessers = new ArrayList<>();
-                guessers.addAll(possibleGuessers.subList(0, Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_PLAYERS_LIMIT)));
-                final MultiplayerGame game = createMultiplayerGame(painter, guessers);
-                startTimer(game.getId(), GameType.MULTIPLAYER);
+                final ArrayList<String> guesserLogins = new ArrayList<>();
+                guesserLogins.addAll(possibleGuessers.subList(0, Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_GUESSERS_LIMIT)));
+                final MultiplayerGame game = createMultiplayerGame(painterLogin, guesserLogins);
+                try {
+                    startTimer(game.getId(), GameType.MULTIPLAYER);
+                } catch (IOException exception) {
+
+                    LOGGER.error("Something went wrong when starting timer for multiplayer game #{}.", game.getId());
+                    endMultiplayerGame(game.getId(), GameResult.GAME_LOST, null);
+                }
+            }
+        }
+
+        if (!possibleGuessers.isEmpty()) {
+            distributeToAvailableGames(possibleGuessers);
+        }
+    }
+
+    private void distributeToAvailableGames(ArrayList<String> guessers) {
+
+        final ArrayList<MultiplayerGame> availableGames = new ArrayList<>(currentMultiplayerGames.values().stream()
+            .map(e -> (MultiplayerGame) e.getGame())
+            .filter(e -> e.getUserLogins().size() < (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1))
+            .collect(Collectors.toList()));
+
+        for (MultiplayerGame game : availableGames) {
+
+            final int freeSpace = game.getUserLogins().size() - (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1);
+            final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, freeSpace));
+            guessers.removeAll(playersToConnect);
+
+            final ScheduledGame scheduledGame = currentMultiplayerGames.get(game.getId());
+            final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
+
+
+            for (String player : playersToConnect) {
+
+                final WebSocketSession session = queuedPlayers.get(player).getSession();
+                final WebSocketMessage<BaseGameContent> gameState;
+
+                try {
+                    gameState = getGameStateMessage(scheduledGame, player, true);
+
+                } catch (IOException exception) {
+
+                    LOGGER.error("Something went wrong when joining player {} to multiplayer game #{}.", player, game.getId());
+                    continue;
+                }
+
+                game.getUserLogins().add(player);
+                relatedGames.put(
+                    player,
+                    new GameRelation(
+                        game.getId(),
+                        GameType.MULTIPLAYER,
+                        PlayerRole.GUESSER,
+                        queuedPlayers.get(player).getSession(),
+                        game.getUserLogins().indexOf(player) + 1));
+
+                SessionOperator.sendMessage(session, gameState);
+            }
+
+            sendPlayersConnected(initialSessions, playersToConnect);
+
+            playersToConnect.forEach(queuedPlayers::remove);
+            if (guessers.isEmpty()) {
+                break;
             }
         }
     }
 
+    private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
+
+        final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
+            connectedPlayers.stream()
+                .map(e -> new PlayerInfo(e, relatedGames.get(e).getPlayerNumber()))
+                .collect(Collectors.toList()));
+
+        final PlayerConnectContent playerConnectContent = new PlayerConnectContent(playerInfos);
+
+        initialPlayers.forEach(
+            (WebSocketSession reciever) ->
+                SessionOperator.sendMessage(
+                    reciever,
+                    new WebSocketMessage<>(
+                        MessageType.PLAYER_CONNECT.toString(),
+                        playerConnectContent)));
+    }
+
+    @SuppressWarnings("UnnecessaryLocalVariable")
     private MultiplayerGame createMultiplayerGame(String painterLogin, ArrayList<String> guesserLogins) {
 
-        final ArrayList<String> players = new ArrayList<>(guesserLogins);
+        final ArrayList<String> players = guesserLogins;
         players.add(painterLogin);
         final String word = dashesService.getRandomDash(painterLogin).getWord();
 
@@ -407,7 +493,7 @@ public class GameManagerService {
 
         SessionOperator.sendMessage(
             gameRelation.getSession(),
-            getGameState(scheduledGame, login, false));
+            getGameStateMessage(scheduledGame, login, false));
     }
 
     public void startTimer(int gameId, GameType gameType) throws IOException {
@@ -425,7 +511,7 @@ public class GameManagerService {
 
             final String login = SessionOperator.getLogin(session);
 
-            final WebSocketMessage<BaseGameContent> gameState = getGameState(scheduledGame, login, true);
+            final WebSocketMessage<BaseGameContent> gameState = getGameStateMessage(scheduledGame, login, true);
             SessionOperator.sendMessage(session, gameState);
         }
 
@@ -580,7 +666,7 @@ public class GameManagerService {
         return sessions;
     }
 
-    private @NotNull WebSocketMessage<BaseGameContent> getGameState(
+    private @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(
         @NotNull ScheduledGame scheduledGame,
         @NotNull String login,
         boolean starting) throws IOException {

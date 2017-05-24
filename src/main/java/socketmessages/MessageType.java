@@ -13,7 +13,8 @@ public enum MessageType {
     CHECK_ANSWER("GET_ANSWER"),
     STOP_GAME("STOP_GAME"),
     TIMER_STATE("TIMER_STATE"),
-    EXIT_GAME("EXIT");;
+    EXIT_GAME("EXIT"),
+    PLAYER_CONNECT("PLAYER_CONNECT");
 
     private final String type;
 
