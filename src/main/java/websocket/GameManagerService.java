@@ -29,7 +29,7 @@ public class GameManagerService {
     public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 1;
     public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 5;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
-    public static final int MULTIPLAYER_TIME_LIMIT = 120;
+    public static final int MULTIPLAYER_TIME_LIMIT = 500;
     public static final int QUEUE_REFRESH_TIME = 2;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
@@ -252,10 +252,10 @@ public class GameManagerService {
             while (!possiblePainters.isEmpty()) {
 
                 final String painterLogin = possiblePainters.get(0);
+                final boolean canBeGuesser = possibleGuessers.remove(painterLogin);
                 possiblePainters.remove(painterLogin);
-                possibleGuessers.remove(painterLogin);
 
-                if (possibleGuessers.size() >= (MULTIPLAYER_LOWER_GUESSERS_LIMIT)) {
+                if (possibleGuessers.size() >= MULTIPLAYER_LOWER_GUESSERS_LIMIT) {
 
                     final ArrayList<String> guesserLogins = new ArrayList<>();
                     final int playersCount = Math.min(possibleGuessers.size(), MULTIPLAYER_UPPER_GUESSERS_LIMIT);
@@ -270,11 +270,16 @@ public class GameManagerService {
                         endMultiplayerGame(game.getId(), GameResult.GAME_LOST, null);
                     }
                 } else {
+
+                    if (canBeGuesser) {
+                        possibleGuessers.add(painterLogin);
+                    }
+
                     break;
                 }
             }
 
-            if (!possibleGuessers.isEmpty()) {
+            if (!possibleGuessers.isEmpty() && !currentMultiplayerGames.isEmpty()) {
                 distributeToAvailableGames(possibleGuessers);
             }
 
@@ -290,27 +295,16 @@ public class GameManagerService {
 
             for (MultiplayerGame game : availableGames) {
 
-                final int freeSpace = game.getUserLogins().size() - (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1);
-                final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, freeSpace));
+                final int freeSpace = (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1) - game.getUserLogins().size();
+                final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, Math.min(guessers.size(), freeSpace)));
                 guessers.removeAll(playersToConnect);
 
                 final ScheduledGame scheduledGame = currentMultiplayerGames.get(game.getId());
-                final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
-
+                //final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
 
                 for (String player : playersToConnect) {
 
                     final WebSocketSession session = queuedPlayers.get(player).getSession();
-                    final WebSocketMessage<BaseGameContent> gameState;
-
-                    try {
-                        gameState = getGameStateMessage(scheduledGame, player, true);
-
-                    } catch (IOException exception) {
-
-                        LOGGER.error("Something went wrong when joining player {} to multiplayer game #{}.", player, game.getId());
-                        continue;
-                    }
 
                     game.getUserLogins().add(player);
                     relatedGames.put(
@@ -322,10 +316,23 @@ public class GameManagerService {
                             queuedPlayers.get(player).getSession(),
                             game.getUserLogins().indexOf(player) + 1));
 
+                    final WebSocketMessage<BaseGameContent> gameState;
+
+                    try {
+                        gameState = getGameStateMessage(scheduledGame, player, true);
+
+                    } catch (IOException exception) {
+
+                        LOGGER.error("Something went wrong when joining player {} to multiplayer game #{}.", player, game.getId());
+                        game.getUserLogins().remove(player);
+                        relatedGames.remove(player);
+                        continue;
+                    }
+
                     SessionOperator.sendMessage(session, gameState);
                 }
 
-                sendPlayersConnected(initialSessions, playersToConnect);
+                //sendPlayersConnected(initialSessions, playersToConnect);
 
                 playersToConnect.forEach(queuedPlayers::remove);
                 if (guessers.isEmpty()) {
@@ -427,7 +434,7 @@ public class GameManagerService {
         queuedPlayers.put(login, new QueueRelation(role, session));
     }
 
-    private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
+    /*private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
 
         final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
             connectedPlayers.stream()
@@ -443,7 +450,7 @@ public class GameManagerService {
                     new WebSocketMessage<>(
                         MessageType.PLAYER_CONNECT.toString(),
                         playerConnectContent)));
-    }
+    }*/
 
     @SuppressWarnings("UnnecessaryLocalVariable")
     private MultiplayerGame createMultiplayerGame(String painterLogin, ArrayList<String> guesserLogins) {
