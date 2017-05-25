@@ -233,6 +233,10 @@ public class GameManagerService {
 
         private void checkQueue() {
 
+            if (running) {
+                return;
+            }
+
             running = true;
 
             final ArrayList<String> possiblePainters = new ArrayList<>();
