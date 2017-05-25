@@ -315,7 +315,7 @@ public class GameManagerService {
 
                     try {
                         //todo starting = joining
-                        gameState = getGameStateMessage(scheduledGame, player, true);
+                        gameState = getJoinGameMessage(scheduledGame, player);
 
                     } catch (IOException exception) {
 
@@ -520,7 +520,7 @@ public class GameManagerService {
 
         SessionOperator.sendMessage(
             gameRelation.getSession(),
-            getGameStateMessage(scheduledGame, login, false));
+            getGameStateMessage(scheduledGame, login));
     }
 
     public void startTimer(int gameId, GameType gameType) throws IOException {
@@ -538,7 +538,7 @@ public class GameManagerService {
 
             final String login = SessionOperator.getLogin(session);
 
-            final WebSocketMessage<BaseGameContent> gameState = getGameStateMessage(scheduledGame, login, true);
+            final WebSocketMessage<BaseGameContent> gameState = getJoinGameMessage(scheduledGame, login);
             SessionOperator.sendMessage(session, gameState);
         }
 
@@ -693,15 +693,14 @@ public class GameManagerService {
         return sessions;
     }
 
-    private @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(
+    private @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(
         @NotNull ScheduledGame scheduledGame,
-        @NotNull String login,
-        boolean starting) throws IOException {
+        @NotNull String login) throws IOException {
 
         if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
 
             final SingleplayerGame singleplayerGame = (SingleplayerGame) scheduledGame.getGame();
-            final MessageType messageType = starting ? MessageType.START_SINGLEPLAYER_GAME : MessageType.STATE;
+            final MessageType messageType = MessageType.START_SINGLEPLAYER_GAME;
 
             return new WebSocketMessage<>(
                 messageType.toString(),
@@ -713,7 +712,43 @@ public class GameManagerService {
         } else {
 
             final MultiplayerGame multiplayerGame = (MultiplayerGame) scheduledGame.getGame();
-            final MessageType messageType = starting ? MessageType.START_MULTIPLAYER_GAME : MessageType.STATE;
+            final MessageType messageType = MessageType.START_MULTIPLAYER_GAME;
+            final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
+                multiplayerGame.getUserLogins().stream()
+                    .map(e -> new PlayerInfo(e, relatedGames.get(e).getPlayerNumber()))
+                    .collect(Collectors.toList()));
+
+            return new WebSocketMessage<>(
+                messageType.toString(),
+                new MultiplayerGameStateContent(
+                    scheduledGame.getTimeLeft(),
+                    MULTIPLAYER_TIME_LIMIT,
+                    relatedGames.get(login).getRole(),
+                    playerInfos,
+                    multiplayerGame.getWord()));
+        }
+    }
+
+    private @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(
+        @NotNull ScheduledGame scheduledGame,
+        @NotNull String login) throws IOException {
+
+        final MessageType messageType = MessageType.STATE;
+
+        if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
+
+            final SingleplayerGame singleplayerGame = (SingleplayerGame) scheduledGame.getGame();
+
+            return new WebSocketMessage<>(
+                messageType.toString(),
+                new SingleplayerGameStateContent(
+                    singleplayerGame.getDashes(),
+                    scheduledGame.getTimeLeft(),
+                    SINGLEPLAYER_TIME_LIMIT));
+
+        } else {
+
+            final MultiplayerGame multiplayerGame = (MultiplayerGame) scheduledGame.getGame();
             final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
                 multiplayerGame.getUserLogins().stream()
                     .map(e -> new PlayerInfo(e, relatedGames.get(e).getPlayerNumber()))
