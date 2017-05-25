@@ -40,7 +40,6 @@ public class GameManagerService {
     private final MultiplayerGamesService multiplayerGamesService;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
-    private final QueueManager queueManager = new QueueManager();
     private final Map<String, GameRelation> relatedGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentSingleplayerGames = new ConcurrentHashMap<>();
     private final Map<Integer, ScheduledGame> currentMultiplayerGames = new ConcurrentHashMap<>();
@@ -59,11 +58,7 @@ public class GameManagerService {
         this.multiplayerGamesService = multiplayerGamesService;
 
         scheduler.scheduleAtFixedRate(
-            () -> {
-                if (!queueManager.isRunning()) {
-                    queueManager.checkQueue();
-                }
-            },
+            new QueueManager()::checkQueue,
             QUEUE_REFRESH_TIME, QUEUE_REFRESH_TIME, TimeUnit.SECONDS);
     }
 
@@ -226,10 +221,6 @@ public class GameManagerService {
     private final class QueueManager {
 
         private boolean running = false;
-
-        public boolean isRunning() {
-            return running;
-        }
 
         private void checkQueue() {
 
