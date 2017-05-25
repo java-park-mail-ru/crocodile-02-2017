@@ -29,7 +29,7 @@ public class GameManagerService {
     public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 1;
     public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 5;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
-    public static final int MULTIPLAYER_TIME_LIMIT = 500;
+    public static final int MULTIPLAYER_TIME_LIMIT = 120;
     public static final int QUEUE_REFRESH_TIME = 2;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
@@ -210,7 +210,7 @@ public class GameManagerService {
             return game;
         }
 
-        public float getTimeRemaining() {
+        public float getTimeLeft() {
 
             if (shutdownTask.isCancelled()) {
                 return ((float) timeLeftMillis) / 1000;
@@ -319,6 +319,7 @@ public class GameManagerService {
                     final WebSocketMessage<BaseGameContent> gameState;
 
                     try {
+                        //todo starting = joining
                         gameState = getGameStateMessage(scheduledGame, player, true);
 
                     } catch (IOException exception) {
@@ -551,7 +552,7 @@ public class GameManagerService {
             getFinishTime(gameType));
 
         LOGGER.info("{} game #{} started, timer: {}.",
-            gameType.toString().toUpperCase(), scheduledGame.getGame().getId(), scheduledGame.getTimeRemaining());
+            gameType.toString().toUpperCase(), scheduledGame.getGame().getId(), scheduledGame.getTimeLeft());
     }
 
     public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) throws Exception {
@@ -568,7 +569,7 @@ public class GameManagerService {
             return;
         }
 
-        LOGGER.debug("Time left: {}.", scheduledGame.getTimeRemaining());
+        LOGGER.debug("Time left: {}.", scheduledGame.getTimeLeft());
 
         final boolean answerCorrect = scheduledGame.getGame().isCorrectAnswer(word);
         final int playerNumber = relatedGames.get(login).getPlayerNumber();
@@ -711,7 +712,7 @@ public class GameManagerService {
                 messageType.toString(),
                 new SingleplayerGameStateContent(
                     singleplayerGame.getDashes(),
-                    scheduledGame.getTimeRemaining(),
+                    scheduledGame.getTimeLeft(),
                     SINGLEPLAYER_TIME_LIMIT));
 
         } else {
@@ -726,7 +727,7 @@ public class GameManagerService {
             return new WebSocketMessage<>(
                 messageType.toString(),
                 new MultiplayerGameStateContent(
-                    scheduledGame.getTimeRemaining(),
+                    scheduledGame.getTimeLeft(),
                     MULTIPLAYER_TIME_LIMIT,
                     relatedGames.get(login).getRole(),
                     playerInfos,

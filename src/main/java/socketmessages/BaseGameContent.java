@@ -13,13 +13,13 @@ public class BaseGameContent extends EmptyContent {
     public static final String TIME_LIMIT_ATTR = "timer";
 
     protected final @NotNull GameType gameType;
-    protected final float timePassed;
+    protected final float timeLeft;
     protected final float timeLimit;
 
-    public BaseGameContent(@NotNull GameType gameType, float timePassed, float timeLimit) {
+    public BaseGameContent(@NotNull GameType gameType, float timeLeft, float timeLimit) {
 
         this.gameType = gameType;
-        this.timePassed = timePassed;
+        this.timeLeft = timeLeft;
         this.timeLimit = timeLimit;
     }
 
@@ -29,8 +29,8 @@ public class BaseGameContent extends EmptyContent {
     }
 
     @JsonProperty(TIME_PASSED_ATTR)
-    public float getTimePassed() {
-        return timePassed;
+    public float getTimeLeft() {
+        return timeLeft;
     }
 
     @JsonProperty(TIME_LIMIT_ATTR)
