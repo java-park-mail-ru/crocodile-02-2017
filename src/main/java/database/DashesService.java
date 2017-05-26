@@ -10,5 +10,7 @@ public interface DashesService {
 
     void addUsedDashes(@NotNull String login, int dashesId) throws DataAccessException;
 
-    @NotNull Dashes getRandomDash(@NotNull String login) throws DataAccessException;
+    @NotNull Dashes getRandomDashes(@NotNull String login) throws DataAccessException;
+
+    @NotNull Dashes getRandomDashes() throws DataAccessException;
 }

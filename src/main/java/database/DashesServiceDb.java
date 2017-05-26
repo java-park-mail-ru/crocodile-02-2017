@@ -77,7 +77,7 @@ public class DashesServiceDb implements DashesService {
     }
 
     @Override
-    public @NotNull Dashes getRandomDash(@NotNull String login) throws DataRetrievalFailureException {
+    public @NotNull Dashes getRandomDashes(@NotNull String login) throws DataRetrievalFailureException {
 
         if (checkAllWordsUsed(login)) {
             removeUsedWords(login);
@@ -92,6 +92,20 @@ public class DashesServiceDb implements DashesService {
                 " SELECT dashesid FROM account_dashes" +
                 " JOIN account ON account.login = :%1$s AND account.id = accountid )",
             LOGIN_PARAM);
+
+        final List<Dashes> result = database.query(selectDashSql, source, DASH_MAPPER);
+        if (result.isEmpty()) {
+            throw new DataRetrievalFailureException("dashes retrieval error");
+        }
+
+        return result.get(RANDOM.nextInt(result.size()));
+    }
+
+    @Override
+    public @NotNull Dashes getRandomDashes() throws DataRetrievalFailureException {
+
+        final MapSqlParameterSource source = new MapSqlParameterSource();
+        final String selectDashSql = " SELECT * FROM dashes";
 
         final List<Dashes> result = database.query(selectDashSql, source, DASH_MAPPER);
         if (result.isEmpty()) {

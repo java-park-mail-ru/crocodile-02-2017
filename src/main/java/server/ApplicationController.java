@@ -2,8 +2,11 @@ package server;
 
 import database.AccountService;
 import database.AccountServiceDb;
+import database.DashesService;
+import database.DashesServiceDb;
 import entities.Account;
 import httpmessages.AccountData;
+import httpmessages.DashesData;
 import httpmessages.ErrorCode;
 import httpmessages.ErrorData;
 import org.slf4j.Logger;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
@@ -31,12 +35,14 @@ public class ApplicationController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationController.class);
 
     private final AccountService accountService;
+    private final DashesService dashesService;
 
     @Autowired
     public ApplicationController(
-        AccountServiceDb accountService) {
+        AccountServiceDb accountService, DashesServiceDb dashesService) {
 
         this.accountService = accountService;
+        this.dashesService = dashesService;
     }
 
     @ExceptionHandler(DataAccessException.class)
@@ -232,5 +238,12 @@ public class ApplicationController {
         return ResponseEntity.ok(accountService
             .getBest().stream().map(AccountData::new)
             .collect(Collectors.toCollection(LinkedHashSet::new)));
+    }
+
+    //frontend offline purposes
+    @GetMapping(path = "/rand-dashes/", produces = "application/json")
+    public ResponseEntity getRandomDashes() throws IOException {
+
+        return ResponseEntity.ok(new DashesData(dashesService.getRandomDashes()));
     }
 }

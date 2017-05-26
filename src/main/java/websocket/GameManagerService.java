@@ -220,7 +220,7 @@ public class GameManagerService {
 
     private final class QueueManager {
 
-        private boolean running = false;
+        private volatile boolean running = false;
 
         private void checkQueue() {
 
@@ -409,7 +409,7 @@ public class GameManagerService {
 
         clearData(session);
         final String login = SessionOperator.getLogin(session);
-        final Dashes dashes = dashesService.getRandomDash(login);
+        final Dashes dashes = dashesService.getRandomDashes(login);
 
         LOGGER.info("Got dashes #{}, {} for {}", dashes.getId(), dashes.getWord(), login);
 
@@ -453,7 +453,7 @@ public class GameManagerService {
 
         final ArrayList<String> players = guesserLogins;
         players.add(painterLogin);
-        final String word = dashesService.getRandomDash(painterLogin).getWord();
+        final String word = dashesService.getRandomDashes(painterLogin).getWord();
 
         final MultiplayerGame game = multiplayerGamesService.createGame(word, players);
         currentMultiplayerGames.put(game.getId(), new ScheduledGame(game, GameType.MULTIPLAYER));
