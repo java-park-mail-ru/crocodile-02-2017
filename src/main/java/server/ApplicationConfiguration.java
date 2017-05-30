@@ -51,6 +51,5 @@ public class ApplicationConfiguration {
     public WebSocketHandler gameWebSocketHandler() {
         return new PerConnectionWebSocketHandler(GameSocketHandler.class);
     }
-
 }
 

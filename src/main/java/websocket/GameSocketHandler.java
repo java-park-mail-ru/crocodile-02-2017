@@ -83,10 +83,13 @@ public class GameSocketHandler extends TextWebSocketHandler {
         try {
             final WebSocketMessage message = readMessage(textMessage, EmptyContent.class);
 
-            LOGGER.info("Got websocket message type {} from user {}.",
-                message.getTypeString(), SessionOperator.getLogin(session));
+            if (message.getTypeEnum() != MessageType.UPDATE) {
 
-            webSocketMessageHandler.handle(session, textMessage, message.getTypeEnum());
+                LOGGER.info("Got websocket message type {} from user {}.",
+                    message.getTypeString(), SessionOperator.getLogin(session));
+
+                webSocketMessageHandler.handle(session, textMessage, message.getTypeEnum());
+            }
 
         } catch (Exception exception) {
 
@@ -107,7 +110,7 @@ public class GameSocketHandler extends TextWebSocketHandler {
         super.afterConnectionClosed(session, status);
     }
 
-    private void handleStartSingleplayerGame(WebSocketSession session) throws DataAccessException, IOException {
+    private void handleStartSingleplayerGame(WebSocketSession session) throws DataAccessException {
 
         final SingleplayerGame game = gameManagerService.createSingleplayerGame(session);
         gameManagerService.startTimer(game.getId(), GameType.SINGLEPLAYER);

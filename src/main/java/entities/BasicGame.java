@@ -3,10 +3,13 @@ package entities;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class BasicGame {
+import java.util.ArrayList;
+
+public abstract class BasicGame {
 
     protected final int id;
     protected final @NotNull String word;
+    protected final @NotNull ArrayList<String> logins;
 
     public BasicGame(
         int id,
@@ -14,6 +17,7 @@ public class BasicGame {
 
         this.id = id;
         this.word = word;
+        logins = new ArrayList<>();
     }
 
     public int getId() {
@@ -28,5 +32,9 @@ public class BasicGame {
 
         return (answer != null) &&
             this.word.equalsIgnoreCase(answer);
+    }
+
+    public ArrayList<String> getUserLogins() {
+        return logins;
     }
 }

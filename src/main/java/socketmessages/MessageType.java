@@ -6,6 +6,7 @@ public enum MessageType {
 
     EMPTY(""),
     STATE("STATE"),
+    UPDATE("UPDATE"),
     GET_STATE("GET_STATE"),
     NEW_POINT("NEW_POINT"),
     START_SINGLEPLAYER_GAME("START_SP_GAME"),
@@ -14,7 +15,10 @@ public enum MessageType {
     STOP_GAME("STOP_GAME"),
     TIMER_STATE("TIMER_STATE"),
     EXIT_GAME("EXIT"),
-    PLAYER_CONNECT("PLAYER_CONNECT");
+    PLAYER_CONNECT("PLAYER_CONNECT_CONTENT"),
+    PLAYER_DISCONNECT("PLAYER_DISCONNECT"),
+    VOTE_ANSWER("VOTE_ANSWER"),
+    NEW_VOTE("NEW_VOTE");
 
     private final String type;
 
