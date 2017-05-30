@@ -1,6 +1,7 @@
 package websocket;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.web.socket.WebSocketSession;
 import socketmessages.GameType;
 import socketmessages.PlayerRole;
@@ -100,12 +101,12 @@ public class GameRelationManager {
         return sessions;
     }
 
-    public GameRelation getRelation(@NotNull String login) {
+    public GameRelation getRelation(@Nullable String login) {
 
         return relatedGames.get(login);
     }
 
-    public void removeRelation(@NotNull String login) {
+    public void removeRelation(@Nullable String login) {
 
         relatedGames.remove(login);
     }

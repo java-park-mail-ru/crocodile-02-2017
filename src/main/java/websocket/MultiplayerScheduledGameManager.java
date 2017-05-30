@@ -3,6 +3,7 @@ package websocket;
 import database.MultiplayerGamesService;
 import entities.MultiplayerGame;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.web.socket.WebSocketSession;
 import socketmessages.*;
 
@@ -69,7 +70,7 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                     multiplayerGame.getWord()));
         }
 
-        private synchronized void endMultiplayerGame(GameResult gameResult, @NotNull String winnerLogin) {
+        private synchronized void endMultiplayerGame(GameResult gameResult, @Nullable String winnerLogin) {
 
             final int gameId = getGame().getId();
 
@@ -121,7 +122,7 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
         @Override
         synchronized void runLoseTask() {
 
-            endMultiplayerGame(GameResult.GAME_LOST, "");
+            endMultiplayerGame(GameResult.GAME_LOST, null);
         }
 
         @Override
