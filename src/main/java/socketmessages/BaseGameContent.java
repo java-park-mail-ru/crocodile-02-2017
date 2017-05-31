@@ -11,12 +11,13 @@ public class BaseGameContent extends EmptyContent {
     public static final String TYPE_ATTR = "type";
     public static final String TIME_PASSED_ATTR = "current_time";
     public static final String TIME_LIMIT_ATTR = "timer";
+    public static final String POINTS_ATTR = "points";
 
     protected final @NotNull GameType gameType;
     protected final float timeLeft;
     protected final float timeLimit;
 
-    public BaseGameContent(@NotNull GameType gameType, float timeLeft, float timeLimit) {
+    protected BaseGameContent(@NotNull GameType gameType, float timeLeft, float timeLimit) {
 
         this.gameType = gameType;
         this.timeLeft = timeLeft;

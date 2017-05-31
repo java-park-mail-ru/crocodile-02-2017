@@ -24,23 +24,18 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
         }
 
         @Override
-        WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login) {
+        public @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login) {
 
-            final MessageType messageType = MessageType.STATE;
-
-            return new WebSocketMessage<>(
-                messageType.toString(),
-                new SingleplayerGameStateContent(
-                    game.getDashes(),
-                    this.getTimeLeft(),
-                    GameManagerService.SINGLEPLAYER_TIME_LIMIT));
+            return getGameMessage(MessageType.STATE);
         }
 
-        @NotNull
         @Override
-        WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login) {
+        public @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login) {
 
-            final MessageType messageType = MessageType.START_SINGLEPLAYER_GAME;
+            return getGameMessage(MessageType.START_MULTIPLAYER_GAME);
+        }
+
+        private WebSocketMessage<BaseGameContent> getGameMessage(MessageType messageType) {
 
             return new WebSocketMessage<>(
                 messageType.toString(),
@@ -72,25 +67,26 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
             }
         }
 
+
         @Override
-        synchronized void runWinTask(@NotNull String winnerLogin) {
+        public synchronized void runWinTask(@NotNull String winnerLogin) {
 
             endSingleplayerGame(GameResult.GAME_WON);
         }
 
         @Override
-        synchronized void runLoseTask() {
+        public synchronized void runLoseTask() {
 
             endSingleplayerGame(GameResult.GAME_LOST);
         }
 
         @Override
-        int getWinScore() {
+        public int getWinScore() {
             return GameManagerService.SINGLEPLAYER_GAME_SCORE;
         }
 
         @Override
-        int getFinishTime() {
+        public int getFinishTime() {
             return GameManagerService.SINGLEPLAYER_TIME_LIMIT;
         }
     }

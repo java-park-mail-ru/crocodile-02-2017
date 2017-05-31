@@ -103,7 +103,6 @@ public class GameSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    @SuppressWarnings("OverlyBroadThrowsClause")
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 

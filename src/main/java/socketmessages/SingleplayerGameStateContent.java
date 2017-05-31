@@ -18,7 +18,6 @@ public class SingleplayerGameStateContent extends BaseGameContent {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleplayerGameStateContent.class);
 
-    public static final String POINTS_ATTR = "points";
     public static final String TIME_PASSED_ATTR = "current_time";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -34,7 +33,7 @@ public class SingleplayerGameStateContent extends BaseGameContent {
         } catch (IOException exception) {
 
             this.dashesJson = null;
-            LOGGER.error("CREATION OF SINGLEPLAYER STATE CONTENT FAILED FOR DASHED {} - BAD JSON", dashes.getId());
+            LOGGER.error("CREATION OF SINGLEPLAYER STATE CONTENT FAILED FOR DASHES {} - BAD JSON", dashes.getId());
         }
 
     }

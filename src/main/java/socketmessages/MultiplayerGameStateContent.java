@@ -18,6 +18,7 @@ public class MultiplayerGameStateContent extends BaseGameContent {
 
     private final @NotNull PlayerRole role;
     private final @NotNull ArrayList<PlayerInfo> players;
+    private final @NotNull ArrayList<PicturePointContent> points;
     private final @Nullable String word;
 
     public MultiplayerGameStateContent(
@@ -25,10 +26,13 @@ public class MultiplayerGameStateContent extends BaseGameContent {
         float timeLimit,
         @NotNull PlayerRole role,
         @NotNull ArrayList<PlayerInfo> players,
+        @NotNull ArrayList<PicturePointContent> points,
         @Nullable String word) {
+
         super(GameType.MULTIPLAYER, timePassed, timeLimit);
         this.role = role;
         this.players = players;
+        this.points = points;
         this.word = (role == PlayerRole.PAINTER) ? word : null;
     }
 
@@ -40,6 +44,11 @@ public class MultiplayerGameStateContent extends BaseGameContent {
     @JsonProperty(PLAYERS_ATTR)
     public @NotNull ArrayList<PlayerInfo> getPlayers() {
         return players;
+    }
+
+    @JsonProperty(POINTS_ATTR)
+    public @NotNull ArrayList<PicturePointContent> getPoints() {
+        return points;
     }
 
     @JsonInclude(NON_NULL)

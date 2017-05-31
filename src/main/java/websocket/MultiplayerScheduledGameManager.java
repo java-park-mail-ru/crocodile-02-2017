@@ -27,32 +27,42 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
         }
 
         @Override
-        WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login) {
+        public @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login) {
 
-            final MessageType messageType = MessageType.STATE;
-
-            final MultiplayerGame multiplayerGame = getGame();
-            final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
-                multiplayerGame.getUserLogins().stream()
-                    .map(e -> new PlayerInfo(e, gameRelationManager.getRelation(e).getPlayerNumber()))
-                    .collect(Collectors.toList()));
-
-            return new WebSocketMessage<>(
-                messageType.toString(),
-                new MultiplayerGameStateContent(
-                    getTimeLeft(),
-                    GameManagerService.MULTIPLAYER_TIME_LIMIT,
-                    gameRelationManager.getRelation(login).getRole(),
-                    playerInfos,
-                    multiplayerGame.getWord()));
+            return getGameMessage(login, MessageType.STATE);
         }
 
-        @NotNull
         @Override
-        WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login) {
+        public @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login) {
+
+            return getGameMessage(login, MessageType.START_MULTIPLAYER_GAME);
+        }
+
+        @Override
+        public synchronized void runWinTask(@NotNull String winnerLogin) {
+
+            endMultiplayerGame(GameResult.GAME_WON, winnerLogin);
+        }
+
+        @Override
+        public synchronized void runLoseTask() {
+
+            endMultiplayerGame(GameResult.GAME_LOST, null);
+        }
+
+        @Override
+        public int getWinScore() {
+            return GameManagerService.MULTIPLAYER_GAME_SCORE;
+        }
+
+        @Override
+        public int getFinishTime() {
+            return GameManagerService.MULTIPLAYER_TIME_LIMIT;
+        }
+
+        private WebSocketMessage<BaseGameContent> getGameMessage(@NotNull String login, MessageType messageType) {
 
             final MultiplayerGame multiplayerGame = getGame();
-            final MessageType messageType = MessageType.START_MULTIPLAYER_GAME;
             final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
                 multiplayerGame.getUserLogins().stream()
                     .map(e -> new PlayerInfo(e, gameRelationManager.getRelation(e).getPlayerNumber()))
@@ -65,6 +75,7 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                     GameManagerService.MULTIPLAYER_TIME_LIMIT,
                     gameRelationManager.getRelation(login).getRole(),
                     playerInfos,
+                    getPoints(),
                     multiplayerGame.getWord()));
         }
 
@@ -108,28 +119,6 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                 currentGames.remove(gameId);
                 LOGGER.info("Multiplayer game #{} ended with result {}.", gameId, gameResult.asInt());
             }
-        }
-
-        @Override
-        synchronized void runWinTask(@NotNull String winnerLogin) {
-
-            endMultiplayerGame(GameResult.GAME_WON, winnerLogin);
-        }
-
-        @Override
-        synchronized void runLoseTask() {
-
-            endMultiplayerGame(GameResult.GAME_LOST, null);
-        }
-
-        @Override
-        int getWinScore() {
-            return GameManagerService.MULTIPLAYER_GAME_SCORE;
-        }
-
-        @Override
-        int getFinishTime() {
-            return GameManagerService.MULTIPLAYER_TIME_LIMIT;
         }
     }
 

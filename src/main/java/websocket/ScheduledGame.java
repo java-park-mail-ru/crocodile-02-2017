@@ -41,7 +41,7 @@ abstract class ScheduledGame <T extends BasicGame> {
         return points;
     }
 
-    void rechedule(Runnable task, int delaySeconds) {
+    public void rechedule(Runnable task, int delaySeconds) {
 
         cancelShutdown();
         shutdownCommand = task;
@@ -49,11 +49,11 @@ abstract class ScheduledGame <T extends BasicGame> {
         shutdownTask = scheduler.schedule(task, delaySeconds, TimeUnit.SECONDS);
     }
 
-    void setRepeatable(Runnable task, int periodSeconds) {
+    public void setRepeatable(Runnable task, int periodSeconds) {
         this.repeatTask = scheduler.schedule(task, periodSeconds, TimeUnit.SECONDS);
     }
 
-    synchronized boolean cancelShutdown() {
+    public synchronized boolean cancelShutdown() {
 
         timeLeftMillis = shutdownTask.getDelay(TimeUnit.MILLISECONDS);
 
@@ -66,7 +66,7 @@ abstract class ScheduledGame <T extends BasicGame> {
         return false;
     }
 
-    synchronized void resumeShutdown() {
+    public synchronized void resumeShutdown() {
 
         if (shutdownTask.isCancelled() && (timeLeftMillis > 0)) {
 
@@ -74,7 +74,7 @@ abstract class ScheduledGame <T extends BasicGame> {
         }
     }
 
-    synchronized void cancelAll() {
+    public synchronized void cancelAll() {
 
         cancelShutdown();
         if (repeatTask != null) {
@@ -98,15 +98,15 @@ abstract class ScheduledGame <T extends BasicGame> {
         return Float.POSITIVE_INFINITY;
     }
 
-    abstract WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login);
+    public abstract @NotNull WebSocketMessage<BaseGameContent> getGameStateMessage(@NotNull String login);
 
-    abstract @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login);
+    public abstract @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login);
 
-    abstract void runWinTask(@NotNull String winnerLogin);
+    public abstract void runWinTask(@NotNull String winnerLogin);
 
-    abstract void runLoseTask();
+    public abstract void runLoseTask();
 
-    abstract int getWinScore();
+    public abstract int getWinScore();
 
-    abstract int getFinishTime();
+    public abstract int getFinishTime();
 }
