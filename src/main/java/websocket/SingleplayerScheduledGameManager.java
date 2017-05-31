@@ -32,7 +32,7 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
         @Override
         public @NotNull WebSocketMessage<BaseGameContent> getJoinGameMessage(@NotNull String login) {
 
-            return getGameMessage(MessageType.START_MULTIPLAYER_GAME);
+            return getGameMessage(MessageType.START_SINGLEPLAYER_GAME);
         }
 
         private WebSocketMessage<BaseGameContent> getGameMessage(MessageType messageType) {
