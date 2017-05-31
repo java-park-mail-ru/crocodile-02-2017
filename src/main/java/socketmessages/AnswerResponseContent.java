@@ -15,23 +15,23 @@ public class AnswerResponseContent extends EmptyContent {
     public static final String PLAYER_ATTR = "player";
     public static final String PLAYER_NUMBER_ATTR = "color";
 
-    //private final int id;
+    private final int id;
     private final @Nullable String answer;
     private final boolean correct;
     private final @NotNull PlayerInfo playerInfo;
 
-    public AnswerResponseContent(/*int id,*/ @Nullable String answer, boolean correct, @NotNull PlayerInfo playerInfo) {
+    public AnswerResponseContent(int id, @Nullable String answer, boolean correct, @NotNull PlayerInfo playerInfo) {
 
-        //this.id = id;
+        this.id = id;
         this.answer = answer;
         this.correct = correct;
         this.playerInfo = playerInfo;
     }
 
-    /*@JsonProperty(ID_ATTR)
+    @JsonProperty(ID_ATTR)
     public int getid() {
         return id;
-    }*/
+    }
 
     @JsonProperty(CORRECT_ATTR)
     public boolean isCorrect() {

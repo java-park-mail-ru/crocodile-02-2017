@@ -15,7 +15,6 @@ public class GameRelationManager {
 
     private final Map<String, GameRelation> relatedGames = new ConcurrentHashMap<>();
 
-    @SuppressWarnings("unused")
     public static final class GameRelation {
 
         private final int gameId;
@@ -23,16 +22,7 @@ public class GameRelationManager {
         private final PlayerRole role;
         private final WebSocketSession session;
         private final int playerNumber;
-
-        private GameRelation(int gameId, GameType gameType, WebSocketSession session, int playerNumber) {
-
-            this.gameId = gameId;
-            this.type = gameType;
-            this.role = PlayerRole.GUESSER;
-            this.session = session;
-            this.playerNumber = playerNumber;
-        }
-
+        
         GameRelation(int gameId, GameType gameType, WebSocketSession session, PlayerRole role, int playerNumber) {
 
             this.gameId = gameId;
@@ -63,26 +53,27 @@ public class GameRelationManager {
         }
     }
 
-    public void addRelation(
+    public void addGuesserRelation(
         @NotNull WebSocketSession session, @NotNull ScheduledGame scheduledGame, int playerNumber) {
 
         final GameRelation gameRelation = new GameRelation(
             scheduledGame.getGame().getId(),
             scheduledGame.getType(),
             session,
+            PlayerRole.GUESSER,
             playerNumber);
 
         relatedGames.put(SessionOperator.getLogin(session), gameRelation);
     }
 
-    public void addRelation(
-        @NotNull WebSocketSession session, @NotNull ScheduledGame scheduledGame, @NotNull PlayerRole playerRole, int playerNumber) {
+    public void addPainterRelation(
+        @NotNull WebSocketSession session, @NotNull ScheduledGame scheduledGame, int playerNumber) {
 
         final GameRelation gameRelation = new GameRelation(
             scheduledGame.getGame().getId(),
             scheduledGame.getType(),
             session,
-            playerRole,
+            PlayerRole.PAINTER,
             playerNumber);
 
         relatedGames.put(SessionOperator.getLogin(session), gameRelation);

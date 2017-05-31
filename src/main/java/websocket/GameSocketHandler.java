@@ -49,12 +49,17 @@ public class GameSocketHandler extends TextWebSocketHandler {
             this::handleCheckAnswer);
 
         webSocketMessageHandler.setHandler(
+            MessageType.NEW_POINT,
+            this::handleAddPoint);
+
+        webSocketMessageHandler.setHandler(
+            MessageType.VOTE_ANSWER,
+            this::handleAddVote);
+
+        webSocketMessageHandler.setHandler(
             MessageType.GET_STATE,
             (WebSocketSession s, TextMessage m) -> handleGetState(s));
 
-        webSocketMessageHandler.setHandler(
-            MessageType.NEW_POINT,
-            this::handleAddPoint);
 
         webSocketMessageHandler.setHandler(
             MessageType.EXIT_GAME,
@@ -116,13 +121,12 @@ public class GameSocketHandler extends TextWebSocketHandler {
         gameManagerService.startTimer(game.getId(), GameType.SINGLEPLAYER);
     }
 
-    private void handleStartMultiplayerGame(WebSocketSession session) throws IOException {
+    private void handleStartMultiplayerGame(WebSocketSession session) {
 
         gameManagerService.queueForMultiplayerGame(session, PlayerRole.ANYONE);
     }
 
-    @SuppressWarnings("OverlyBroadThrowsClause")
-    private void handleCheckAnswer(WebSocketSession session, TextMessage textMessage) throws Exception {
+    private void handleCheckAnswer(WebSocketSession session, TextMessage textMessage) throws IOException {
 
         final String login = SessionOperator.getLogin(session);
 
@@ -132,14 +136,19 @@ public class GameSocketHandler extends TextWebSocketHandler {
         gameManagerService.checkAnswer(session, answerContent.getWord());
     }
 
-    @SuppressWarnings("OverlyBroadThrowsClause")
-    private void handleAddPoint(WebSocketSession session, TextMessage textMessage) throws Exception {
+    private void handleAddPoint(WebSocketSession session, TextMessage textMessage) throws IOException {
 
         final PicturePointContent point = (PicturePointContent) readMessage(textMessage, PicturePointContent.class).getContent();
         gameManagerService.addPoint(session, point);
     }
 
-    private void handleGetState(WebSocketSession session) throws IOException {
+    private void handleAddVote(WebSocketSession session, TextMessage textMessage) throws IOException {
+
+        final AnswerVoteContent vote = (AnswerVoteContent) readMessage(textMessage, AnswerVoteContent.class).getContent();
+        gameManagerService.addAnswerVote(session, vote.getId(), vote.isVotePositive());
+    }
+
+    private void handleGetState(WebSocketSession session) {
 
         gameManagerService.sendGameState(session);
     }

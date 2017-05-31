@@ -4,6 +4,7 @@ import database.*;
 import entities.Dashes;
 import entities.MultiplayerGame;
 import entities.SingleplayerGame;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,12 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 import socketmessages.*;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +33,7 @@ public class GameManagerService {
     public static final int QUEUE_REFRESH_TIME = 2;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameManagerService.class);
+    private static final AtomicInteger ANSWER_ID_GEN = new AtomicInteger(1);
 
     private final AccountService accountService;
     private final DashesService dashesService;
@@ -166,21 +168,21 @@ public class GameManagerService {
                     continue;
                 }
 
-                //final ArrayList<WebSocketSession> initialSessions = getGameSessions(scheduledGame);
+                final ArrayList<WebSocketSession> initialSessions = gameRelationManager.getGameSessions(scheduledGame);
 
                 for (String player : playersToConnect) {
 
                     final WebSocketSession session = queuedPlayers.get(player).getSession();
 
                     game.getUserLogins().add(player);
-                    gameRelationManager.addRelation(
+                    gameRelationManager.addGuesserRelation(
                         session, scheduledGame, game.getUserLogins().indexOf(player) + 1);
 
                     final WebSocketMessage<BaseGameContent> gameState = scheduledGame.getJoinGameMessage(player);
                     SessionOperator.sendMessage(session, gameState);
                 }
 
-                //sendPlayersConnected(initialSessions, playersToConnect);
+                sendPlayersConnected(initialSessions, playersToConnect);
 
                 playersToConnect.forEach(queuedPlayers::remove);
                 if (guessers.isEmpty()) {
@@ -201,61 +203,15 @@ public class GameManagerService {
         final SingleplayerGame game = singleplayerGamesService.createGame(login, dashes.getId());
         final ScheduledGame scheduledGame = singleplayerManager.createScheduledGame(game);
 
-        gameRelationManager.addRelation(session, scheduledGame, 1);
+        gameRelationManager.addGuesserRelation(session, scheduledGame, 1);
         return game;
     }
 
-    public synchronized void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) throws IOException {
+    public synchronized void queueForMultiplayerGame(WebSocketSession session, PlayerRole role) {
 
         clearData(session);
         final String login = SessionOperator.getLogin(session);
         queuedPlayers.put(login, new QueueRelation(role, session));
-    }
-
-    /*private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
-
-        final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
-            connectedPlayers.stream()
-                .map(e -> new PlayerInfo(e, relatedGames.get(e).getPlayerNumber()))
-                .collect(Collectors.toList()));
-
-        final PlayerConnectContent playerConnectContent = new PlayerConnectContent(playerInfos);
-
-        initialPlayers.forEach(
-            (WebSocketSession reciever) ->
-                SessionOperator.sendMessage(
-                    reciever,
-                    new WebSocketMessage<>(
-                        MessageType.PLAYER_CONNECT.toString(),
-                        playerConnectContent)));
-    }*/
-
-    @SuppressWarnings("UnnecessaryLocalVariable")
-    private MultiplayerGame createMultiplayerGame(String painterLogin, ArrayList<String> guesserLogins) {
-
-        final ArrayList<String> players = guesserLogins;
-        players.add(painterLogin);
-        final String word = dashesService.getRandomDashes(painterLogin).getWord();
-
-        final MultiplayerGame game = multiplayerGamesService.createGame(word, players);
-        final ScheduledGame scheduledGame = multiplayerManager.createScheduledGame(game);
-        LOGGER.info("Got word {} for multiplayer game #{}", word, game.getId());
-
-        guesserLogins.forEach(
-            (String login) ->
-                gameRelationManager.addRelation(
-                    queuedPlayers.get(login).getSession(),
-                    scheduledGame,
-                    guesserLogins.indexOf(login) + 1));
-
-        gameRelationManager.addRelation(
-            queuedPlayers.get(painterLogin).getSession(),
-            scheduledGame,
-            PlayerRole.PAINTER,
-            guesserLogins.size() + 1);
-
-        players.forEach(queuedPlayers::remove);
-        return game;
     }
 
     public void addPoint(WebSocketSession session, PicturePointContent point) {
@@ -280,7 +236,7 @@ public class GameManagerService {
                         point)));
     }
 
-    public void sendGameState(WebSocketSession session) throws IOException {
+    public void sendGameState(WebSocketSession session) {
 
         final String login = SessionOperator.getLogin(session);
         final ScheduledGame scheduledGame = getUserScheduledGame(login);
@@ -320,7 +276,7 @@ public class GameManagerService {
             gameType.toString().toUpperCase(), scheduledGame.getGame().getId(), scheduledGame.getTimeLeft());
     }
 
-    public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) throws Exception {
+    public synchronized void checkAnswer(WebSocketSession session, @Nullable String word) {
 
         final String login = SessionOperator.getLogin(session);
         final ScheduledGame scheduledGame = getUserScheduledGame(login);
@@ -363,12 +319,8 @@ public class GameManagerService {
 
             if (scheduledGame.getType() == GameType.MULTIPLAYER) {
 
-                final MultiplayerGame game = (MultiplayerGame) scheduledGame.getGame();
-                game.getUserLogins().remove(login);
-                if (game.getUserLogins().isEmpty()) {
-                    multiplayerGamesService.shutdownGame(gameId);
-                    multiplayerManager.removeScheduledGame(gameId);
-                }
+                //noinspection unchecked
+                disconnectPlayer(scheduledGame, login);
             }
 
             if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
@@ -377,6 +329,98 @@ public class GameManagerService {
                 singleplayerManager.removeScheduledGame(gameId);
             }
         }
+    }
+
+    public void addAnswerVote(WebSocketSession session, int answerId, boolean isPositive) {
+
+        final String login = SessionOperator.getLogin(session);
+        final ScheduledGame scheduledGame = getUserScheduledGame(login);
+
+        if (scheduledGame == null) {
+            LOGGER.warn("User {} tried to add answer vote for a non-existent game.", login);
+            return;
+        }
+
+        final ArrayList<WebSocketSession> sessions = gameRelationManager.getGameSessions(scheduledGame);
+        sessions.remove(session);
+        final AnswerVoteContent vote = new AnswerVoteContent(answerId, isPositive);
+
+        sessions.forEach(
+            (WebSocketSession reciever) ->
+                SessionOperator.sendMessage(
+                    reciever,
+                    new WebSocketMessage<>(
+                        MessageType.NEW_VOTE.toString(),
+                        vote)));
+    }
+
+    private void sendPlayersConnected(ArrayList<WebSocketSession> initialPlayers, ArrayList<String> connectedPlayers) {
+
+        final ArrayList<PlayerInfo> playerInfos = new ArrayList<>(
+            connectedPlayers.stream()
+                .map(e -> new PlayerInfo(e, gameRelationManager.getRelation(e).getPlayerNumber()))
+                .collect(Collectors.toList()));
+
+        final PlayerConnectContent playerConnectContent = new PlayerConnectContent(playerInfos);
+
+        initialPlayers.forEach(
+            (WebSocketSession reciever) ->
+                SessionOperator.sendMessage(
+                    reciever,
+                    new WebSocketMessage<>(
+                        MessageType.PLAYER_CONNECT.toString(),
+                        playerConnectContent)));
+    }
+
+    private void disconnectPlayer(@NotNull ScheduledGame<MultiplayerGame> scheduledGame, String login) {
+
+        final MultiplayerGame game = scheduledGame.getGame();
+        final int gameId = game.getId();
+        game.getUserLogins().remove(login);
+
+        if (game.getUserLogins().isEmpty()) {
+            multiplayerGamesService.shutdownGame(gameId);
+            multiplayerManager.removeScheduledGame(gameId);
+        } else {
+
+            final ArrayList<WebSocketSession> sessions = gameRelationManager.getGameSessions(scheduledGame);
+            final PlayerDisconnectContent playerDisconnectContent = new PlayerDisconnectContent(login);
+
+            sessions.forEach(
+                (WebSocketSession reciever) ->
+                    SessionOperator.sendMessage(
+                        reciever,
+                        new WebSocketMessage<>(
+                            MessageType.PLAYER_DISCONNECT.toString(),
+                            playerDisconnectContent)));
+        }
+    }
+
+    @SuppressWarnings("UnnecessaryLocalVariable")
+    private MultiplayerGame createMultiplayerGame(String painterLogin, ArrayList<String> guesserLogins) {
+
+        final ArrayList<String> players = guesserLogins;
+        players.add(painterLogin);
+        final String word = dashesService.getRandomDashes(painterLogin).getWord();
+
+        final MultiplayerGame game = multiplayerGamesService.createGame(word, players);
+        final ScheduledGame scheduledGame = multiplayerManager.createScheduledGame(game);
+        LOGGER.info("Got word {} for multiplayer game #{}", word, game.getId());
+
+        guesserLogins.forEach(
+            (String login) ->
+                gameRelationManager.addGuesserRelation(
+                    queuedPlayers.get(login).getSession(),
+                    scheduledGame,
+                    guesserLogins.indexOf(login) + 1));
+
+        gameRelationManager.addPainterRelation(
+            queuedPlayers.get(painterLogin).getSession(),
+            scheduledGame,
+            guesserLogins.size() + 1);
+
+        players.forEach(queuedPlayers::remove);
+        return game;
     }
 
     private void runWinTask(ScheduledGame scheduledGame, String winnerLogin) {
@@ -390,10 +434,12 @@ public class GameManagerService {
 
     private void resendAnswer(ArrayList<WebSocketSession> sessions, @Nullable String answer, boolean answerCorrect, PlayerInfo senderInfo) {
 
+        final int answerId = ANSWER_ID_GEN.getAndIncrement();
+
         for (WebSocketSession session : sessions) {
 
             final WebSocketMessage data = new WebSocketMessage<>(
-                MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answer, answerCorrect, senderInfo));
+                MessageType.CHECK_ANSWER.toString(), new AnswerResponseContent(answerId, answer, answerCorrect, senderInfo));
             SessionOperator.sendMessage(session, data);
         }
     }
