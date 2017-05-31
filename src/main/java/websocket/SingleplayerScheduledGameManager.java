@@ -1,6 +1,5 @@
 package websocket;
 
-import database.SingleplayerGamesService;
 import entities.SingleplayerGame;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.WebSocketSession;
@@ -11,7 +10,6 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class SingleplayerScheduledGameManager extends ScheduledGameManager<SingleplayerGame> {
 
-    private final SingleplayerGamesService singleplayerGamesService;
     private final GameRelationManager gameRelationManager;
 
     public final class SingleplayerScheduledGame extends ScheduledGame<SingleplayerGame> {
@@ -69,7 +67,6 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
                         getGame().getWord())));
 
                 currentGames.remove(gameId);
-                singleplayerGamesService.shutdownGame(gameId);
                 gameRelationManager.removeRelation(SessionOperator.getLogin(session));
                 LOGGER.info("Singleplayer game #{} ended with result {}.", gameId, gameResult.asInt());
             }
@@ -100,11 +97,9 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
 
     public SingleplayerScheduledGameManager(
         ScheduledExecutorService scheduler,
-        SingleplayerGamesService service,
         GameRelationManager gameRelationManager) {
 
         super(scheduler, new ConcurrentHashMap<>());
-        this.singleplayerGamesService = service;
         this.gameRelationManager = gameRelationManager;
     }
 

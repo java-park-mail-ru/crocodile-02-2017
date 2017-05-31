@@ -1,6 +1,9 @@
 package websocket;
 
-import database.*;
+import database.AccountService;
+import database.AccountServiceDb;
+import database.DashesService;
+import database.DashesServiceDb;
 import entities.Dashes;
 import entities.MultiplayerGame;
 import entities.SingleplayerGame;
@@ -37,8 +40,6 @@ public class GameManagerService {
 
     private final AccountService accountService;
     private final DashesService dashesService;
-    private final SingleplayerGamesService singleplayerGamesService;
-    private final MultiplayerGamesService multiplayerGamesService;
 
     //todo concurrent collections?
     private final GameRelationManager gameRelationManager = new GameRelationManager();
@@ -50,22 +51,15 @@ public class GameManagerService {
     @Autowired
     public GameManagerService(
         AccountServiceDb accountService,
-        DashesServiceDb dashesService,
-        SingleplayerGamesServiceDb singleplayerGamesService,
-        MultiplayerGamesServiceDb multiplayerGamesService) {
+        DashesServiceDb dashesService) {
 
         this.accountService = accountService;
         this.dashesService = dashesService;
-        this.singleplayerGamesService = singleplayerGamesService;
-        this.multiplayerGamesService = multiplayerGamesService;
 
         final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
-        singleplayerManager = new SingleplayerScheduledGameManager(
-            scheduler, singleplayerGamesService, gameRelationManager);
-
-        multiplayerManager = new MultiplayerScheduledGameManager(
-            scheduler, multiplayerGamesService, gameRelationManager);
+        singleplayerManager = new SingleplayerScheduledGameManager(scheduler, gameRelationManager);
+        multiplayerManager = new MultiplayerScheduledGameManager(scheduler, gameRelationManager);
 
         scheduler.scheduleAtFixedRate(
             new QueueManager()::checkQueue,
@@ -200,7 +194,7 @@ public class GameManagerService {
 
         LOGGER.info("Got dashes #{}, {} for {}", dashes.getId(), dashes.getWord(), login);
 
-        final SingleplayerGame game = singleplayerGamesService.createGame(login, dashes.getId());
+        final SingleplayerGame game = new SingleplayerGame(login, dashes);
         final ScheduledGame scheduledGame = singleplayerManager.createScheduledGame(game);
 
         gameRelationManager.addGuesserRelation(session, scheduledGame, 1);
@@ -325,7 +319,6 @@ public class GameManagerService {
 
             if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
 
-                singleplayerGamesService.shutdownGame(gameId);
                 singleplayerManager.removeScheduledGame(gameId);
             }
         }
@@ -379,7 +372,6 @@ public class GameManagerService {
         game.getUserLogins().remove(login);
 
         if (game.getUserLogins().isEmpty()) {
-            multiplayerGamesService.shutdownGame(gameId);
             multiplayerManager.removeScheduledGame(gameId);
         } else {
 
@@ -401,9 +393,9 @@ public class GameManagerService {
 
         final ArrayList<String> players = guesserLogins;
         players.add(painterLogin);
-        final String word = dashesService.getRandomDashes(painterLogin).getWord();
+        final String word = dashesService.getRandomDashes().getWord();
 
-        final MultiplayerGame game = multiplayerGamesService.createGame(word, players);
+        final MultiplayerGame game = new MultiplayerGame(word, players);
         final ScheduledGame scheduledGame = multiplayerManager.createScheduledGame(game);
         LOGGER.info("Got word {} for multiplayer game #{}", word, game.getId());
 
@@ -417,7 +409,7 @@ public class GameManagerService {
         gameRelationManager.addPainterRelation(
             queuedPlayers.get(painterLogin).getSession(),
             scheduledGame,
-            guesserLogins.size() + 1);
+            guesserLogins.size());
 
         players.forEach(queuedPlayers::remove);
         return game;

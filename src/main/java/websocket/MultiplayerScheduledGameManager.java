@@ -1,6 +1,5 @@
 package websocket;
 
-import database.MultiplayerGamesService;
 import entities.MultiplayerGame;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
 
 public class MultiplayerScheduledGameManager extends ScheduledGameManager<MultiplayerGame> {
 
-    private final MultiplayerGamesService multiplayerGamesService;
     private final GameRelationManager gameRelationManager;
 
     public final class MultiplayerScheduledGame extends ScheduledGame<MultiplayerGame> {
@@ -108,7 +106,6 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                     });
 
                 currentGames.remove(gameId);
-                multiplayerGamesService.shutdownGame(gameId);
                 LOGGER.info("Multiplayer game #{} ended with result {}.", gameId, gameResult.asInt());
             }
         }
@@ -138,11 +135,9 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
 
     public MultiplayerScheduledGameManager(
         ScheduledExecutorService scheduler,
-        MultiplayerGamesService service,
         GameRelationManager gameRelationManager) {
 
         super(scheduler, new ConcurrentHashMap<>());
-        this.multiplayerGamesService = service;
         this.gameRelationManager = gameRelationManager;
     }
 

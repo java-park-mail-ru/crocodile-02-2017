@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("unused")
 abstract class ScheduledGame <T extends BasicGame> {
 
     protected final T game;

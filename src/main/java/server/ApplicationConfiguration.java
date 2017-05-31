@@ -2,8 +2,6 @@ package server;
 
 import database.AccountServiceDb;
 import database.DashesServiceDb;
-import database.MultiplayerGamesServiceDb;
-import database.SingleplayerGamesServiceDb;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -28,23 +26,13 @@ public class ApplicationConfiguration {
     }
 
     @Bean
-    public SingleplayerGamesServiceDb singleGameService(NamedParameterJdbcTemplate database) {
-        return new SingleplayerGamesServiceDb(database);
-    }
-
-    @Bean
-    public MultiplayerGamesServiceDb multiplayerGamesService(NamedParameterJdbcTemplate database) {
-        return new MultiplayerGamesServiceDb(database);
-    }
-
-    @Bean
     public WebSocketMessageHandler webSocketMessageHandler() {
         return new WebSocketMessageHandler();
     }
 
     @Bean
-    public GameManagerService gameManagerService(AccountServiceDb accountServiceDb, DashesServiceDb dashesService, SingleplayerGamesServiceDb singleplayerGamesService, MultiplayerGamesServiceDb multiplayerGamesService) {
-        return new GameManagerService(accountServiceDb, dashesService, singleplayerGamesService, multiplayerGamesService);
+    public GameManagerService gameManagerService(AccountServiceDb accountServiceDb, DashesServiceDb dashesService) {
+        return new GameManagerService(accountServiceDb, dashesService);
     }
 
     @Bean

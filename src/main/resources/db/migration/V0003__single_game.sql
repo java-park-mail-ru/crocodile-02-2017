@@ -1,9 +1,0 @@
-CREATE TABLE single_game (
-  id        SERIAL PRIMARY KEY NOT NULL,
-  accountid INTEGER            NOT NULL UNIQUE,
-  dashesid  INTEGER            NOT NULL,
-  FOREIGN KEY (dashesid) REFERENCES public.dashes (id)
-  MATCH SIMPLE ON UPDATE NO ACTION ON DELETE NO ACTION,
-  FOREIGN KEY (accountid) REFERENCES public.account (id)
-  MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
-)
