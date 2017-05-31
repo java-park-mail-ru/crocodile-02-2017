@@ -30,7 +30,7 @@ public class GameManagerService {
     public static final int SINGLEPLAYER_TIME_LIMIT = 60;
     public static final int SINGLEPLAYER_GAME_SCORE = 1;
     public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 1;
-    public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 5;
+    public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 4;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
     public static final int MULTIPLAYER_TIME_LIMIT = 120;
     public static final int QUEUE_REFRESH_TIME = 2;
@@ -361,7 +361,7 @@ public class GameManagerService {
                 SessionOperator.sendMessage(
                     reciever,
                     new WebSocketMessage<>(
-                        MessageType.PLAYER_CONNECT.toString(),
+                        MessageType.PLAYERS_CONNECT.toString(),
                         playerConnectContent)));
     }
 
