@@ -1,9 +1,12 @@
-package server;
+package httpmessages;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class ErrorData {
 
     public static final String CODE_ATTR = "code";

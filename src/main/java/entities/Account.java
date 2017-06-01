@@ -1,4 +1,4 @@
-package server;
+package entities;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -10,10 +10,10 @@ public class Account {
     private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
     private final int id;
-    private @NotNull String login;
-    private @NotNull String passwordHash;
-    private @NotNull String email;
-    private int rating;
+    private final @NotNull String login;
+    private final @NotNull String passwordHash;
+    private final @NotNull String email;
+    private final int rating;
 
     @Contract("!null->!null")
     public static @Nullable String hashPassword(@Nullable String password) {
@@ -39,10 +39,6 @@ public class Account {
 
     public @NotNull String getLogin() {
         return login;
-    }
-
-    public @NotNull String getPasswordHash() {
-        return passwordHash;
     }
 
     public @NotNull String getEmail() {

@@ -1,13 +1,13 @@
-package server;
+package httpmessages;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
+import entities.Account;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class AccountData {
 
     public static final String LOGIN_ATTR = "login";
@@ -18,7 +18,7 @@ public class AccountData {
     private final String login;
     private final String password;
     private final String email;
-    private int rating;
+    private final int rating;
 
     @JsonCreator
     public AccountData(
@@ -33,7 +33,6 @@ public class AccountData {
     }
 
     public AccountData(@NotNull Account account) {
-
 
         this.login = account.getLogin();
         this.password = null;
@@ -51,6 +50,7 @@ public class AccountData {
         return (login != null);
     }
 
+    @JsonProperty(value = PASSWORD_ATTR)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String getPassword() {
         return password;
