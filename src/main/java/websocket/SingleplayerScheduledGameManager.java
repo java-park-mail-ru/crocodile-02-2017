@@ -75,7 +75,7 @@ public class SingleplayerScheduledGameManager extends ScheduledGameManager<Singl
         }
 
         @Override
-        public synchronized void runLoseTask() {
+        public synchronized void runLoseTask(@NotNull GameResult result) {
 
             endSingleplayerGame(GameResult.GAME_LOST);
         }

@@ -45,9 +45,9 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
         }
 
         @Override
-        public synchronized void runLoseTask() {
+        public synchronized void runLoseTask(@NotNull GameResult result) {
 
-            endMultiplayerGame(GameResult.GAME_LOST, null);
+            endMultiplayerGame(GameResult.PAINTER_LEFT, null);
         }
 
         @Override
@@ -103,6 +103,10 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                     gameRelationManager.removeRelation(winnerLogin);
                 }
 
+                final GameResult losersResult = (gameResult == GameResult.GAME_WON) ?
+                    GameResult.GAME_LOST :
+                    gameResult;
+
                 losers.forEach(
                     (WebSocketSession session) -> {
 
@@ -110,7 +114,7 @@ public class MultiplayerScheduledGameManager extends ScheduledGameManager<Multip
                             session, new WebSocketMessage<>(
                                 MessageType.STOP_GAME.toString(),
                                 new FinishGameContent(
-                                    GameResult.GAME_LOST, 0,
+                                    losersResult, 0,
                                     winnerLogin, word)));
 
                         gameRelationManager.removeRelation(SessionOperator.getLogin(session));

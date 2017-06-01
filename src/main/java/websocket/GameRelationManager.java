@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class GameRelationManager {
 
@@ -90,6 +91,21 @@ public class GameRelationManager {
             .collect(Collectors.toList()));
 
         return sessions;
+    }
+
+    public ArrayList<Integer> getAvailableIds(@NotNull ScheduledGame scheduledGame) {
+
+        final ArrayList<Integer> availableIds = new ArrayList<>(
+            IntStream.rangeClosed(1, GameManagerService.MULTIPLAYER_PLAYERS_LIMIT).boxed()
+                .collect(Collectors.toList()));
+
+        final ArrayList<Integer> takenIds = new ArrayList<>(
+            scheduledGame.getGame().getUserLogins().stream()
+                .map(e -> getRelation(e).getPlayerNumber())
+                .collect(Collectors.toList()));
+
+        availableIds.removeAll(takenIds);
+        return availableIds;
     }
 
     public GameRelation getRelation(@Nullable String login) {

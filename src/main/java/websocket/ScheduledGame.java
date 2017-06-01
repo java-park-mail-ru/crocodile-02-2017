@@ -2,10 +2,7 @@ package websocket;
 
 import entities.BasicGame;
 import org.jetbrains.annotations.NotNull;
-import socketmessages.BaseGameContent;
-import socketmessages.GameType;
-import socketmessages.PicturePointContent;
-import socketmessages.WebSocketMessage;
+import socketmessages.*;
 
 import java.util.ArrayList;
 import java.util.concurrent.ScheduledExecutorService;
@@ -104,7 +101,7 @@ abstract class ScheduledGame <T extends BasicGame> {
 
     public abstract void runWinTask(@NotNull String winnerLogin);
 
-    public abstract void runLoseTask();
+    public abstract void runLoseTask(@NotNull GameResult result);
 
     public abstract int getWinScore();
 

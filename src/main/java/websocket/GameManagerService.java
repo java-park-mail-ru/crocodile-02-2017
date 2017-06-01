@@ -31,6 +31,7 @@ public class GameManagerService {
     public static final int SINGLEPLAYER_GAME_SCORE = 1;
     public static final int MULTIPLAYER_LOWER_GUESSERS_LIMIT = 1;
     public static final int MULTIPLAYER_UPPER_GUESSERS_LIMIT = 4;
+    public static final int MULTIPLAYER_PLAYERS_LIMIT = MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1;
     public static final int MULTIPLAYER_GAME_SCORE = 3;
     public static final int MULTIPLAYER_TIME_LIMIT = 120;
     public static final int QUEUE_REFRESH_TIME = 2;
@@ -148,12 +149,12 @@ public class GameManagerService {
 
             final ArrayList<MultiplayerGame> availableGames = new ArrayList<>(multiplayerManager.getScheduledGames().stream()
                 .map(e -> (MultiplayerGame) e.getGame())
-                .filter(e -> e.getUserLogins().size() < (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1))
+                .filter(e -> e.getUserLogins().size() < MULTIPLAYER_PLAYERS_LIMIT)
                 .collect(Collectors.toList()));
 
             for (MultiplayerGame game : availableGames) {
 
-                final int freeSpace = (MULTIPLAYER_UPPER_GUESSERS_LIMIT + 1) - game.getUserLogins().size();
+                final int freeSpace = MULTIPLAYER_PLAYERS_LIMIT - game.getUserLogins().size();
                 final ArrayList<String> playersToConnect = new ArrayList<>(guessers.subList(0, Math.min(guessers.size(), freeSpace)));
                 guessers.removeAll(playersToConnect);
 
@@ -161,16 +162,18 @@ public class GameManagerService {
                 if (scheduledGame == null) {
                     continue;
                 }
-
+                final ArrayList<Integer> availableIds = gameRelationManager.getAvailableIds(scheduledGame);
                 final ArrayList<WebSocketSession> initialSessions = gameRelationManager.getGameSessions(scheduledGame);
 
                 for (String player : playersToConnect) {
 
                     final WebSocketSession session = queuedPlayers.get(player).getSession();
+                    final int playerId = availableIds.get(0);
+                    availableGames.remove(0);
 
                     game.getUserLogins().add(player);
                     gameRelationManager.addGuesserRelation(
-                        session, scheduledGame, game.getUserLogins().indexOf(player) + 1);
+                        session, scheduledGame, playerId);
 
                     final WebSocketMessage<BaseGameContent> gameState = scheduledGame.getJoinGameMessage(player);
                     SessionOperator.sendMessage(session, gameState);
@@ -263,7 +266,7 @@ public class GameManagerService {
         }
 
         scheduledGame.rechedule(
-            scheduledGame::runLoseTask,
+            () -> scheduledGame.runLoseTask(GameResult.GAME_LOST),
             scheduledGame.getFinishTime());
 
         LOGGER.info("{} game #{} started, timer: {}.",
@@ -308,13 +311,20 @@ public class GameManagerService {
 
         if (scheduledGame != null) {
 
+            final PlayerRole role = gameRelationManager.getRelation(login).getRole();
             gameRelationManager.removeRelation(login);
             final int gameId = scheduledGame.getGame().getId();
 
             if (scheduledGame.getType() == GameType.MULTIPLAYER) {
 
-                //noinspection unchecked
-                disconnectPlayer(scheduledGame, login);
+                if (role == PlayerRole.PAINTER) {
+
+                    scheduledGame.runLoseTask(GameResult.PAINTER_LEFT);
+                } else {
+
+                    //noinspection unchecked
+                    disconnectPlayer(scheduledGame, login);
+                }
             }
 
             if (scheduledGame.getType() == GameType.SINGLEPLAYER) {
